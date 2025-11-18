@@ -401,15 +401,15 @@
         // Current economic data (as of November 2025) - Updated manually based on latest available data
         // In production, this would come from an API with proper CORS handling or a backend proxy
         const currentEconomicData = {
-            yieldCurve: 0.44,          // 10Y-2Y spread (normalized)
-            unemployment: 4.3,          // August 2025
-            initialClaims: 225000,      // Recent weekly average
-            gdpGrowth: 2.83,           // Q2 2025 YoY
-            industrialProduction: 0.2,  // Recent monthly change %
-            consumerSentiment: 71.8,    // Recent Michigan sentiment
-            creditSpread: 1.95,         // BBB spread
-            housingStarts: 1354        // Thousands, recent
-        };
+    yieldCurve: 0.53,          // 10Y-2Y spread
+    unemployment: 4.3,          // Latest unemployment rate
+    initialClaims: 218000.0,      // Weekly initial claims
+    gdpGrowth: 3.8,           // Latest GDP growth
+    industrialProduction: 0.1,  // Monthly change %
+    consumerSentiment: 55.1,    // Michigan sentiment index
+    creditSpread: 1.06,         // BBB spread
+    housingStarts: 1307.0        // Housing starts (thousands)
+};
         
         // Indicator configuration
         const indicators = [
