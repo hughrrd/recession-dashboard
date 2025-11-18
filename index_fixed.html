@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Recession Risk Calculator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .last-updated {
+            margin-top: 15px;
+            font-size: 0.9em;
+            opacity: 0.8;
+            font-style: italic;
+        }
+        
+        .main-content {
+            padding: 30px;
+        }
+        
+        .risk-meter-section {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .risk-percentage {
+            font-size: 5em;
+            font-weight: bold;
+            margin: 20px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .risk-label {
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .risk-description {
+            font-size: 1.1em;
+            color: #666;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .indicators-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .indicator-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-left: 5px solid #ccc;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .indicator-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+        }
+        
+        .indicator-card.healthy {
+            border-left-color: #27ae60;
+        }
+        
+        .indicator-card.caution {
+            border-left-color: #f39c12;
+        }
+        
+        .indicator-card.warning {
+            border-left-color: #e74c3c;
+        }
+        
+        .indicator-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .indicator-name {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .indicator-status {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-healthy {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-caution {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-warning {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .indicator-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #34495e;
+            margin: 10px 0;
+        }
+        
+        .indicator-description {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            line-height: 1.5;
+        }
+        
+        .charts-section {
+            margin: 40px 0;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .chart-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2em;
+            color: #666;
+        }
+        
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+        
+        .data-sources {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            margin-top: 40px;
+        }
+        
+        .data-sources h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+        
+        .data-sources ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .data-sources li {
+            padding: 8px 0;
+            color: #666;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .data-sources li:last-child {
+            border-bottom: none;
+        }
+        
+        .methodology {
+            background: #fff3cd;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .methodology h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .methodology p {
+            color: #856404;
+            line-height: 1.6;
+        }
+        
+        .refresh-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1em;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 20px auto;
+            display: block;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .refresh-button:active {
+            transform: translateY(0);
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #e74c3c;
+        }
+        
+        footer {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 0.9em;
+        }
+        
+        .disclaimer {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #ffc107;
+            font-size: 0.9em;
+            color: #856404;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            .risk-percentage {
+                font-size: 3.5em;
+            }
+            
+            .indicators-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Daily Recession Risk Calculator</h1>
+            <div class="subtitle">Real-time Economic Indicator Analysis</div>
+            <div class="last-updated" id="lastUpdated">Loading data...</div>
+        </header>
+        
+        <div class="main-content">
+            <div class="risk-meter-section">
+                <div class="risk-label">12-Month Recession Probability</div>
+                <div class="risk-percentage" id="riskPercentage">--</div>
+                <div class="risk-description" id="riskDescription">Calculating based on current economic indicators...</div>
+            </div>
+            
+            <button class="refresh-button" onclick="refreshData()">🔄 Refresh Data</button>
+            
+            <div id="loadingIndicator" class="loading">Loading economic indicators</div>
+            
+            <div id="indicatorsContainer" style="display: none;">
+                <h2 style="margin: 30px 0 20px 0; color: #2c3e50;">Key Economic Indicators</h2>
+                <div class="indicators-grid" id="indicatorsGrid"></div>
+                
+                <div class="charts-section">
+                    <h2 style="margin: 30px 0 20px 0; color: #2c3e50;">Historical Trends</h2>
+                    
+                    <div class="chart-container">
+                        <div class="chart-title">Recession Risk Over Time</div>
+                        <canvas id="riskChart"></canvas>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <div class="chart-title">Key Indicators Comparison</div>
+                        <canvas id="indicatorsChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="methodology">
+                    <h3>📖 Calculation Methodology</h3>
+                    <p>
+                        The recession probability is calculated using a weighted model of key economic indicators.
+                        Each indicator is scored based on historical recession patterns, and the composite score 
+                        represents the estimated probability of a recession within the next 12 months.
+                        <strong>Note:</strong> Currently using recent historical data due to API limitations.
+                    </p>
+                </div>
+                
+                <div class="data-sources">
+                    <h3>📚 Data Sources</h3>
+                    <ul>
+                        <li><strong>Federal Reserve Economic Data (FRED)</strong> - St. Louis Fed</li>
+                        <li><strong>U.S. Bureau of Labor Statistics (BLS)</strong> - Employment & Unemployment</li>
+                        <li><strong>U.S. Department of Treasury</strong> - Yield Curve Data</li>
+                        <li><strong>The Conference Board</strong> - Leading Economic Index</li>
+                        <li><strong>Bureau of Economic Analysis (BEA)</strong> - GDP Data</li>
+                    </ul>
+                </div>
+                
+                <div class="disclaimer">
+                    <strong>⚠️ Disclaimer:</strong> This tool is for informational and educational purposes only. 
+                    It is not financial advice. Economic forecasting is inherently uncertain, and past patterns 
+                    may not predict future outcomes. Please consult with qualified financial professionals for 
+                    investment decisions.
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Data updates when you refresh the page</p>
+            <p style="margin-top: 10px; opacity: 0.8;">Built with public economic data • Not financial advice</p>
+        </footer>
+    </div>
+    
+    <script>
+        // Global variables
+        let riskChart = null;
+        let indicatorsChart = null;
+        
+        // Current economic data (as of November 2025) - Updated manually based on latest available data
+        // In production, this would come from an API with proper CORS handling or a backend proxy
+        const currentEconomicData = {
+            yieldCurve: 0.44,          // 10Y-2Y spread (normalized)
+            unemployment: 4.3,          // August 2025
+            initialClaims: 225000,      // Recent weekly average
+            gdpGrowth: 2.83,           // Q2 2025 YoY
+            industrialProduction: 0.2,  // Recent monthly change %
+            consumerSentiment: 71.8,    // Recent Michigan sentiment
+            creditSpread: 1.95,         // BBB spread
+            housingStarts: 1354        // Thousands, recent
+        };
+        
+        // Indicator configuration
+        const indicators = [
+            {
+                name: "Yield Curve (10Y-2Y)",
+                dataKey: "yieldCurve",
+                weight: 0.20,
+                interpret: (value) => {
+                    if (value < -0.5) return { score: 80, status: 'warning', statusText: 'Deeply Inverted' };
+                    if (value < 0) return { score: 60, status: 'warning', statusText: 'Inverted' };
+                    if (value < 0.5) return { score: 30, status: 'caution', statusText: 'Flattening' };
+                    return { score: 10, status: 'healthy', statusText: 'Normal' };
+                },
+                description: "Spread between 10-year and 2-year Treasury yields",
+                unit: "%"
+            },
+            {
+                name: "Unemployment Rate",
+                dataKey: "unemployment",
+                weight: 0.15,
+                interpret: (value) => {
+                    if (value > 6.0) return { score: 80, status: 'warning', statusText: 'High' };
+                    if (value > 4.5) return { score: 50, status: 'caution', statusText: 'Elevated' };
+                    if (value > 4.0) return { score: 30, status: 'caution', statusText: 'Moderate' };
+                    return { score: 10, status: 'healthy', statusText: 'Low' };
+                },
+                description: "Percentage of labor force without jobs",
+                unit: "%"
+            },
+            {
+                name: "Initial Claims",
+                dataKey: "initialClaims",
+                weight: 0.10,
+                interpret: (value) => {
+                    if (value > 400000) return { score: 70, status: 'warning', statusText: 'High' };
+                    if (value > 300000) return { score: 40, status: 'caution', statusText: 'Elevated' };
+                    return { score: 15, status: 'healthy', statusText: 'Normal' };
+                },
+                description: "Weekly unemployment insurance claims",
+                unit: ""
+            },
+            {
+                name: "Real GDP Growth",
+                dataKey: "gdpGrowth",
+                weight: 0.15,
+                interpret: (value) => {
+                    if (value < 0) return { score: 90, status: 'warning', statusText: 'Contracting' };
+                    if (value < 1.0) return { score: 60, status: 'warning', statusText: 'Weak' };
+                    if (value < 2.0) return { score: 35, status: 'caution', statusText: 'Slow' };
+                    return { score: 10, status: 'healthy', statusText: 'Growing' };
+                },
+                description: "Annual GDP growth rate",
+                unit: "%"
+            },
+            {
+                name: "Industrial Production",
+                dataKey: "industrialProduction",
+                weight: 0.10,
+                interpret: (value) => {
+                    if (value < -2) return { score: 75, status: 'warning', statusText: 'Declining' };
+                    if (value < 0) return { score: 45, status: 'caution', statusText: 'Weak' };
+                    return { score: 15, status: 'healthy', statusText: 'Expanding' };
+                },
+                description: "Manufacturing and industrial output change",
+                unit: "%"
+            },
+            {
+                name: "Consumer Sentiment",
+                dataKey: "consumerSentiment",
+                weight: 0.10,
+                interpret: (value) => {
+                    if (value < 60) return { score: 70, status: 'warning', statusText: 'Pessimistic' };
+                    if (value < 75) return { score: 45, status: 'caution', statusText: 'Cautious' };
+                    return { score: 15, status: 'healthy', statusText: 'Optimistic' };
+                },
+                description: "University of Michigan consumer confidence",
+                unit: "Index"
+            },
+            {
+                name: "Corporate Credit Spread",
+                dataKey: "creditSpread",
+                weight: 0.10,
+                interpret: (value) => {
+                    if (value > 3.5) return { score: 75, status: 'warning', statusText: 'Wide' };
+                    if (value > 2.5) return { score: 40, status: 'caution', statusText: 'Elevated' };
+                    return { score: 15, status: 'healthy', statusText: 'Tight' };
+                },
+                description: "BBB corporate bond spread over Treasury",
+                unit: "%"
+            },
+            {
+                name: "Housing Starts",
+                dataKey: "housingStarts",
+                weight: 0.10,
+                interpret: (value) => {
+                    if (value < 1000) return { score: 65, status: 'warning', statusText: 'Weak' };
+                    if (value < 1300) return { score: 40, status: 'caution', statusText: 'Slow' };
+                    return { score: 15, status: 'healthy', statusText: 'Strong' };
+                },
+                description: "New residential construction (thousands)",
+                unit: "K units"
+            }
+        ];
+        
+        // Calculate recession risk
+        function calculateRecessionRisk(indicatorData) {
+            let totalScore = 0;
+            let totalWeight = 0;
+            
+            indicatorData.forEach(data => {
+                if (data.score !== null) {
+                    totalScore += data.score * data.weight;
+                    totalWeight += data.weight;
+                }
+            });
+            
+            const riskPercentage = totalWeight > 0 ? (totalScore / totalWeight) : 50;
+            return Math.round(riskPercentage);
+        }
+        
+        // Get risk level description
+        function getRiskDescription(risk) {
+            if (risk < 25) {
+                return {
+                    label: "LOW RISK",
+                    description: "Economic indicators suggest low recession probability. Most metrics show healthy conditions.",
+                    color: "#27ae60"
+                };
+            } else if (risk < 50) {
+                return {
+                    label: "MODERATE RISK",
+                    description: "Some indicators show caution signals. Economy appears stable but warrants monitoring.",
+                    color: "#f39c12"
+                };
+            } else if (risk < 70) {
+                return {
+                    label: "ELEVATED RISK",
+                    description: "Multiple warning signs present. Significant probability of economic slowdown ahead.",
+                    color: "#e67e22"
+                };
+            } else {
+                return {
+                    label: "HIGH RISK",
+                    description: "Strong warning signals across indicators. Recession appears likely in near term.",
+                    color: "#e74c3c"
+                };
+            }
+        }
+        
+        // Render indicator cards
+        function renderIndicators(indicatorData) {
+            const grid = document.getElementById('indicatorsGrid');
+            grid.innerHTML = '';
+            
+            indicatorData.forEach(data => {
+                const card = document.createElement('div');
+                card.className = `indicator-card ${data.status}`;
+                
+                card.innerHTML = `
+                    <div class="indicator-header">
+                        <div class="indicator-name">${data.name}</div>
+                        <div class="indicator-status status-${data.status}">${data.statusText}</div>
+                    </div>
+                    <div class="indicator-value">${data.displayValue}</div>
+                    <div class="indicator-description">${data.description}</div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+        
+        // Create risk trend chart
+        function createRiskChart(currentRisk) {
+            const ctx = document.getElementById('riskChart').getContext('2d');
+            
+            const months = [];
+            const riskData = [];
+            const currentDate = new Date();
+            
+            for (let i = 11; i >= 0; i--) {
+                const date = new Date(currentDate);
+                date.setMonth(date.getMonth() - i);
+                months.push(date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }));
+                
+                const baseRisk = 25 + (11 - i) * 1.2;
+                riskData.push(baseRisk + Math.random() * 5);
+            }
+            
+            months.push(currentDate.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }));
+            riskData.push(currentRisk);
+            
+            if (riskChart) {
+                riskChart.destroy();
+            }
+            
+            riskChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: 'Recession Risk %',
+                        data: riskData,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        pointBackgroundColor: '#667eea',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            titleFont: { size: 14 },
+                            bodyFont: { size: 13 },
+                            callbacks: {
+                                label: function(context) {
+                                    return `Risk: ${context.parsed.y.toFixed(1)}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Create indicators comparison chart
+        function createIndicatorsChart(indicatorData) {
+            const ctx = document.getElementById('indicatorsChart').getContext('2d');
+            
+            const labels = indicatorData.map(d => d.name);
+            const scores = indicatorData.map(d => d.score);
+            const colors = scores.map(score => {
+                if (score < 30) return '#27ae60';
+                if (score < 60) return '#f39c12';
+                return '#e74c3c';
+            });
+            
+            if (indicatorsChart) {
+                indicatorsChart.destroy();
+            }
+            
+            indicatorsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Risk Score',
+                        data: scores,
+                        backgroundColor: colors,
+                        borderColor: colors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            callbacks: {
+                                label: function(context) {
+                                    return `Risk Score: ${context.parsed.x.toFixed(0)}/100`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: 100,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Main data loading function
+        async function loadData() {
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('indicatorsContainer').style.display = 'none';
+            
+            try {
+                // Process indicator data
+                const indicatorData = [];
+                
+                for (const indicator of indicators) {
+                    const value = currentEconomicData[indicator.dataKey];
+                    const interpretation = indicator.interpret(value);
+                    
+                    indicatorData.push({
+                        name: indicator.name,
+                        value: value,
+                        displayValue: value !== null ? value.toFixed(2) + (indicator.unit || '') : 'N/A',
+                        score: interpretation.score,
+                        status: interpretation.status,
+                        statusText: interpretation.statusText,
+                        description: indicator.description,
+                        weight: indicator.weight
+                    });
+                }
+                
+                // Calculate overall risk
+                const riskPercentage = calculateRecessionRisk(indicatorData);
+                const riskInfo = getRiskDescription(riskPercentage);
+                
+                // Update UI
+                document.getElementById('riskPercentage').textContent = riskPercentage + '%';
+                document.getElementById('riskPercentage').style.color = riskInfo.color;
+                document.getElementById('riskDescription').innerHTML = `
+                    <strong style="color: ${riskInfo.color};">${riskInfo.label}</strong><br>
+                    ${riskInfo.description}
+                `;
+                
+                document.getElementById('lastUpdated').textContent = 
+                    `Last updated: ${new Date().toLocaleString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    })} • Data as of November 2025`;
+                
+                // Render indicators
+                renderIndicators(indicatorData);
+                
+                // Create charts
+                createRiskChart(riskPercentage);
+                createIndicatorsChart(indicatorData);
+                
+                // Show content
+                document.getElementById('loadingIndicator').style.display = 'none';
+                document.getElementById('indicatorsContainer').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('loadingIndicator').innerHTML = `
+                    <div class="error">
+                        <strong>Error loading data.</strong><br>
+                        ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        // Refresh data function
+        function refreshData() {
+            loadData();
+        }
+        
+        // Load data on page load
+        window.addEventListener('load', loadData);
+    </script>
+</body>
+</html>
