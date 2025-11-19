@@ -324,7 +324,7 @@
         
         .recession-markers {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmin(250px, 1fr));
             gap: 15px;
             margin-top: 15px;
         }
@@ -563,15 +563,26 @@
     <script>
         // THIS IS THE SECTION THAT GITHUB ACTIONS UPDATES AUTOMATICALLY
         const currentEconomicData = {
-    yieldCurve: 0.54,          // 10Y-2Y spread
-    unemployment: 4.3,          // Latest unemployment rate
-    initialClaims: 218000.0,      // Weekly initial claims
-    gdpGrowth: 3.8,           // Latest GDP growth
-    industrialProduction: 0.1,  // Monthly change %
-    consumerSentiment: 55.1,    // Michigan sentiment index
-    creditSpread: 1.07,         // BBB spread
-    housingStarts: 1307.0        // Housing starts (thousands)
-};
+            yieldCurve: 0.44,
+            unemployment: 4.1,
+            initialClaims: 213000,
+            gdpGrowth: 2.8,
+            industrialProduction: 0.2,
+            consumerSentiment: 111.7,
+            creditSpread: 1.95,
+            housingStarts: 1354
+        };
+        
+        const lastUpdatedDates = {
+            yieldCurve: 'Nov 19, 2025',
+            unemployment: 'Oct 31, 2025',
+            initialClaims: 'Nov 16, 2025',
+            gdpGrowth: 'Oct 30, 2025',
+            industrialProduction: 'Oct 31, 2025',
+            consumerSentiment: 'Oct 31, 2025',
+            creditSpread: 'Nov 19, 2025',
+            housingStarts: 'Oct 31, 2025'
+        };
         
         // Economic Indicators Configuration
         const indicators = [
@@ -582,7 +593,7 @@
                 unit: '%',
                 weight: 0.20,
                 updateFrequency: 'Daily',
-                lastUpdated: 'Updated automatically',
+                lastUpdated: lastUpdatedDates.yieldCurve,
                 description: 'Difference between 10-year and 2-year Treasury yields. Historically, an inverted curve (negative value) predicts recessions 12-18 months ahead.',
                 thresholds: { critical: -0.5, warning: 0, safe: 0.5 }
             },
@@ -593,7 +604,7 @@
                 unit: '%',
                 weight: 0.18,
                 updateFrequency: 'Monthly',
-                lastUpdated: 'Updated automatically',
+                lastUpdated: lastUpdatedDates.unemployment,
                 description: 'Percentage of workforce actively seeking employment. Rapid increases of 0.5%+ in 3 months typically signal recession.',
                 thresholds: { critical: 5.0, warning: 4.5, safe: 4.0 }
             },
@@ -604,7 +615,7 @@
                 unit: '% (annualized)',
                 weight: 0.12,
                 updateFrequency: 'Quarterly',
-                lastUpdated: 'Updated automatically',
+                lastUpdated: lastUpdatedDates.gdpGrowth,
                 description: 'Inflation-adjusted economic growth rate. Two consecutive negative quarters technically define a recession.',
                 thresholds: { critical: 0, warning: 1.5, safe: 2.5 }
             },
@@ -615,7 +626,7 @@
                 unit: ' (4wk avg)',
                 weight: 0.06,
                 updateFrequency: 'Weekly',
-                lastUpdated: 'Updated automatically',
+                lastUpdated: lastUpdatedDates.initialClaims,
                 description: 'Weekly new unemployment insurance claims. Sustained increases above 300k typically signal labor market deterioration.',
                 thresholds: { critical: 350000, warning: 275000, safe: 225000 }
             },
@@ -626,7 +637,7 @@
                 unit: ' (index)',
                 weight: 0.04,
                 updateFrequency: 'Monthly',
-                lastUpdated: 'Updated automatically',
+                lastUpdated: lastUpdatedDates.consumerSentiment,
                 description: 'Survey of consumer expectations. Sharp declines below 90 often precede reduced consumer spending and recession.',
                 thresholds: { critical: 80, warning: 90, safe: 100 }
             },
@@ -637,7 +648,7 @@
                 unit: '% change',
                 weight: 0.14,
                 updateFrequency: 'Monthly',
-                lastUpdated: 'Updated automatically',
+                lastUpdated: lastUpdatedDates.industrialProduction,
                 description: 'Manufacturing, mining, and utilities output. Negative growth suggests economic contraction.',
                 thresholds: { critical: -1, warning: 0, safe: 0.5 }
             },
@@ -648,7 +659,7 @@
                 unit: '%',
                 weight: 0.16,
                 updateFrequency: 'Daily',
-                lastUpdated: 'Updated automatically',
+                lastUpdated: lastUpdatedDates.creditSpread,
                 description: 'Difference between corporate BBB bonds and Treasury yields. Widening spreads indicate rising credit risk.',
                 thresholds: { critical: 3.0, warning: 2.0, safe: 1.5 }
             },
@@ -659,7 +670,7 @@
                 unit: 'K units',
                 weight: 0.10,
                 updateFrequency: 'Monthly',
-                lastUpdated: 'Updated automatically',
+                lastUpdated: lastUpdatedDates.housingStarts,
                 description: 'New residential construction projects. Below 1,200K indicates housing market weakness.',
                 thresholds: { critical: 1000, warning: 1200, safe: 1400 }
             }
@@ -669,36 +680,20 @@
         function generateDailyData() {
             const data = [];
             const today = new Date();
-            const daysToGenerate = 730; // 2 years
+            const daysToGenerate = 730;
             
             for (let i = daysToGenerate; i >= 0; i--) {
                 const date = new Date(today);
                 date.setDate(date.getDate() - i);
                 
-                // Calculate risk based on time (simulated daily fluctuations)
                 const baseRisk = 15 + (23 * (1 - i/daysToGenerate));
-                
-                // Add realistic daily volatility
                 const dayOfYear = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 86400000);
                 const volatility = Math.sin(dayOfYear / 30) * 3 + Math.random() * 4 - 2;
                 
-                // Special events that spiked risk
                 let eventSpike = 0;
-                
-                // Banking crisis (Mar 2023)
-                if (date >= new Date('2023-03-01') && date <= new Date('2023-03-31')) {
-                    eventSpike = 8;
-                }
-                
-                // Debt ceiling (May 2023)
-                if (date >= new Date('2023-05-01') && date <= new Date('2023-05-31')) {
-                    eventSpike = 6;
-                }
-                
-                // Recent concerns
-                if (date >= new Date('2025-08-01')) {
-                    eventSpike = 4;
-                }
+                if (date >= new Date('2023-03-01') && date <= new Date('2023-03-31')) eventSpike = 8;
+                if (date >= new Date('2023-05-01') && date <= new Date('2023-05-31')) eventSpike = 6;
+                if (date >= new Date('2025-08-01')) eventSpike = 4;
                 
                 const risk = Math.min(Math.max(baseRisk + volatility + eventSpike, 10), 75);
                 
@@ -711,12 +706,9 @@
             return data;
         }
         
-        // Calculate score for each indicator
         function calculateIndicatorScore(indicator) {
             const value = indicator.value;
             const thresholds = indicator.thresholds;
-            
-            // Reverse logic for indicators where higher is better
             const isInverted = indicator.id === 'gdp' || indicator.id === 'consumerSentiment' || 
                              indicator.id === 'housingStarts' || indicator.id === 'industrialProduction';
             
@@ -736,25 +728,20 @@
             return score;
         }
         
-        // Get interpretation for indicator
         function getInterpretation(score) {
             if (score <= 30) return { status: 'low-risk', statusText: 'Low Risk', score };
             if (score <= 60) return { status: 'medium-risk', statusText: 'Medium Risk', score };
             return { status: 'high-risk', statusText: 'High Risk', score };
         }
         
-        // Calculate overall recession risk
         function calculateRecessionRisk(indicatorData) {
             let totalScore = 0;
-            
             indicatorData.forEach(ind => {
                 totalScore += ind.score * ind.weight;
             });
-            
             return Math.round(totalScore);
         }
         
-        // Get risk description
         function getRiskDescription(risk) {
             if (risk <= 30) {
                 return {
@@ -777,7 +764,6 @@
             }
         }
         
-        // Render indicators
         function renderIndicators(indicatorData) {
             const container = document.getElementById('indicators');
             container.innerHTML = indicatorData.map(ind => `
@@ -803,12 +789,9 @@
             `).join('');
         }
         
-        // Create main risk chart with daily data
         function createRiskChart(currentRisk) {
             const ctx = document.getElementById('riskChart');
             const dailyData = generateDailyData();
-            
-            // Sample every 7 days for cleaner display
             const sampledData = dailyData.filter((_, index) => index % 7 === 0);
             
             new Chart(ctx, {
@@ -840,10 +823,7 @@
                         legend: {
                             display: true,
                             position: 'top',
-                            labels: {
-                                font: { size: 14, weight: 'bold' },
-                                padding: 20
-                            }
+                            labels: { font: { size: 14, weight: 'bold' }, padding: 20 }
                         },
                         tooltip: {
                             mode: 'index',
@@ -888,11 +868,7 @@
                                     borderColor: '#27ae60',
                                     borderWidth: 2,
                                     borderDash: [5, 5],
-                                    label: {
-                                        content: 'Low Risk Threshold (30%)',
-                                        display: true,
-                                        position: 'start'
-                                    }
+                                    label: { content: 'Low Risk Threshold (30%)', display: true, position: 'start' }
                                 },
                                 mediumLine: {
                                     type: 'line',
@@ -901,27 +877,15 @@
                                     borderColor: '#e74c3c',
                                     borderWidth: 2,
                                     borderDash: [5, 5],
-                                    label: {
-                                        content: 'High Risk Threshold (60%)',
-                                        display: true,
-                                        position: 'start'
-                                    }
+                                    label: { content: 'High Risk Threshold (60%)', display: true, position: 'start' }
                                 }
                             }
                         }
                     },
                     scales: {
                         x: {
-                            grid: {
-                                display: false
-                            },
-                            ticks: {
-                                maxRotation: 45,
-                                minRotation: 45,
-                                font: { size: 10 },
-                                autoSkip: true,
-                                maxTicksLimit: 20
-                            }
+                            grid: { display: false },
+                            ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 }, autoSkip: true, maxTicksLimit: 20 }
                         },
                         y: {
                             beginAtZero: true,
@@ -929,32 +893,20 @@
                             max: 100,
                             ticks: {
                                 stepSize: 10,
-                                callback: function(value) {
-                                    return value + '%';
-                                },
+                                callback: function(value) { return value + '%'; },
                                 font: { size: 12 }
                             },
-                            grid: {
-                                color: 'rgba(0, 0, 0, 0.05)'
-                            }
+                            grid: { color: 'rgba(0, 0, 0, 0.05)' }
                         }
                     },
-                    interaction: {
-                        intersect: false,
-                        mode: 'index'
-                    }
+                    interaction: { intersect: false, mode: 'index' }
                 }
             });
         }
         
-        // Create indicators contribution chart
         function createIndicatorsChart(indicatorData) {
             const ctx = document.getElementById('indicatorsChart');
-            
-            // Sort by weighted contribution
-            const sortedData = [...indicatorData].sort((a, b) => 
-                (b.score * b.weight) - (a.score * a.weight)
-            );
+            const sortedData = [...indicatorData].sort((a, b) => (b.score * b.weight) - (a.score * a.weight));
             
             new Chart(ctx, {
                 type: 'bar',
@@ -981,9 +933,7 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: {
-                            display: false
-                        },
+                        legend: { display: false },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
@@ -1000,29 +950,17 @@
                     scales: {
                         x: {
                             beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return value.toFixed(0);
-                                }
-                            },
-                            grid: {
-                                color: 'rgba(0, 0, 0, 0.05)'
-                            }
+                            ticks: { callback: function(value) { return value.toFixed(0); } },
+                            grid: { color: 'rgba(0, 0, 0, 0.05)' }
                         },
-                        y: {
-                            ticks: {
-                                font: { size: 11 }
-                            }
-                        }
+                        y: { ticks: { font: { size: 11 } } }
                     }
                 }
             });
         }
         
-        // Load and display data
         async function loadData() {
             try {
-                // Process indicators
                 const indicatorData = [];
                 for (const indicator of indicators) {
                     const score = calculateIndicatorScore(indicator);
@@ -1042,11 +980,9 @@
                     });
                 }
                 
-                // Calculate overall risk
                 const riskPercentage = calculateRecessionRisk(indicatorData);
                 const riskInfo = getRiskDescription(riskPercentage);
                 
-                // Update UI
                 document.getElementById('riskPercentage').textContent = riskPercentage + '%';
                 document.getElementById('riskPercentage').style.color = riskInfo.color;
                 document.getElementById('riskDescription').innerHTML = `
@@ -1064,14 +1000,10 @@
                         minute: '2-digit'
                     })} • Data updated automatically via GitHub Actions`;
                 
-                // Render indicators
                 renderIndicators(indicatorData);
-                
-                // Create charts
                 createRiskChart(riskPercentage);
                 createIndicatorsChart(indicatorData);
                 
-                // Show content
                 document.getElementById('loadingIndicator').style.display = 'none';
                 document.getElementById('indicatorsContainer').style.display = 'block';
                 
@@ -1086,7 +1018,6 @@
             }
         }
         
-        // Load data on page load
         window.addEventListener('load', loadData);
     </script>
 </body>
