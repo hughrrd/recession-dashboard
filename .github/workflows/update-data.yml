@@ -2,9 +2,8 @@ name: Update Economic Data
 
 on:
   schedule:
-    # Runs every day at 9 AM UTC (adjust timezone as needed)
     - cron: '0 9 * * *'
-  workflow_dispatch:  # Allows manual trigger from GitHub UI
+  workflow_dispatch:
 
 jobs:
   update-data:
@@ -33,7 +32,6 @@ jobs:
         import re
         from datetime import datetime
 
-        # Your FRED API key from GitHub Secrets
         import os
         API_KEY = os.environ.get('FRED_API_KEY')
 
@@ -41,16 +39,16 @@ jobs:
             print("ERROR: FRED_API_KEY not found in secrets!")
             exit(1)
 
-        # FRED series IDs to fetch
+        # CORRECTED FRED series IDs - using actively updated series
         series_mapping = {
-            'yieldCurve': 'T10Y2Y',
-            'unemployment': 'UNRATE',
-            'initialClaims': 'ICSA',
-            'gdpGrowth': 'A191RL1Q225SBEA',
-            'industrialProduction': 'INDPRO',
-            'consumerSentiment': 'UMCSENT',
-            'creditSpread': 'BAMLC0A4CBBB',
-            'housingStarts': 'HOUST'
+            'yieldCurve': 'T10Y2Y',              # 10Y-2Y Treasury spread (daily)
+            'unemployment': 'UNRATE',             # Unemployment rate (monthly)
+            'initialClaims': 'ICSA',              # Initial jobless claims (weekly)
+            'gdpGrowth': 'A191RL1Q225SBEA',       # Real GDP growth (quarterly)
+            'industrialProduction': 'IPG',        # Industrial Production growth rate (monthly)
+            'consumerSentiment': 'UMCSENT',       # Michigan Consumer Sentiment (monthly)
+            'creditSpread': 'BAMLC0A4CBBB',       # BBB corporate bond spread (daily)
+            'housingStarts': 'HOUST'              # Housing starts (monthly)
         }
 
         # Fetch data from FRED with date
@@ -60,26 +58,26 @@ jobs:
                 'series_id': series_id,
                 'api_key': API_KEY,
                 'file_type': 'json',
-                'limit': 1,
+                'limit': 10,  # Get last 10 to skip any '.' values
                 'sort_order': 'desc'
             }
             try:
                 response = requests.get(url, params=params, timeout=10)
                 response.raise_for_status()
                 data = response.json()
-                if data.get('observations') and len(data['observations']) > 0:
-                    obs = data['observations'][0]
-                    value = obs['value']
-                    date = obs['date']
-                    
-                    # Handle special cases where value is '.'
-                    if value == '.':
-                        return None, None
-                    
-                    try:
-                        return float(value), date
-                    except (ValueError, TypeError):
-                        return None, None
+                
+                if data.get('observations'):
+                    # Find first non-null observation
+                    for obs in data['observations']:
+                        value = obs['value']
+                        date = obs['date']
+                        
+                        if value != '.':
+                            try:
+                                return float(value), date
+                            except (ValueError, TypeError):
+                                continue
+                
                 return None, None
             except Exception as e:
                 print(f"Error fetching {series_id}: {e}")
@@ -87,6 +85,7 @@ jobs:
 
         # Fetch all data
         print("Fetching data from FRED API...")
+        print("=" * 60)
         economic_data = {}
         date_data = {}
         
@@ -95,9 +94,11 @@ jobs:
             if value is not None:
                 economic_data[key] = value
                 date_data[key] = date
-                print(f"✓ {key}: {value} (as of {date})")
+                print(f"✓ {key:25s} {series_id:20s} = {value:12.2f} (as of {date})")
             else:
-                print(f"✗ {key}: Failed to fetch")
+                print(f"✗ {key:25s} {series_id:20s} = FAILED")
+
+        print("=" * 60)
 
         if not economic_data:
             print("ERROR: No data fetched successfully!")
@@ -113,49 +114,45 @@ jobs:
 
         # Format dates for display
         def format_date(date_str):
-            """Convert YYYY-MM-DD to readable format like 'Nov 19, 2025'"""
             try:
                 date_obj = datetime.strptime(date_str, '%Y-%m-%d')
                 return date_obj.strftime('%b %d, %Y')
             except:
                 return date_str
 
-        # Update the currentEconomicData object
+        # Update currentEconomicData
         pattern = r'const currentEconomicData = \{[^}]+\};'
         
         new_data = f"""const currentEconomicData = {{
-            yieldCurve: {economic_data.get('yieldCurve', 0.44)},
-            unemployment: {economic_data.get('unemployment', 4.1)},
-            initialClaims: {economic_data.get('initialClaims', 213000)},
-            gdpGrowth: {economic_data.get('gdpGrowth', 2.8)},
-            industrialProduction: {economic_data.get('industrialProduction', 0.2)},
-            consumerSentiment: {economic_data.get('consumerSentiment', 111.7)},
-            creditSpread: {economic_data.get('creditSpread', 1.95)},
-            housingStarts: {economic_data.get('housingStarts', 1354)}
-        }};"""
+    yieldCurve: {economic_data.get('yieldCurve', 0.44)},
+    unemployment: {economic_data.get('unemployment', 4.1)},
+    initialClaims: {economic_data.get('initialClaims', 213000)},
+    gdpGrowth: {economic_data.get('gdpGrowth', 2.8)},
+    industrialProduction: {economic_data.get('industrialProduction', 0.2)},
+    consumerSentiment: {economic_data.get('consumerSentiment', 111.7)},
+    creditSpread: {economic_data.get('creditSpread', 1.95)},
+    housingStarts: {economic_data.get('housingStarts', 1354)}
+}};"""
 
         html_content = re.sub(pattern, new_data, html_content)
 
-        # Update the lastUpdatedDates object (create if doesn't exist)
+        # Update lastUpdatedDates
         dates_pattern = r'const lastUpdatedDates = \{[^}]+\};'
         
         new_dates = f"""const lastUpdatedDates = {{
-            yieldCurve: '{format_date(date_data.get('yieldCurve', ''))}',
-            unemployment: '{format_date(date_data.get('unemployment', ''))}',
-            initialClaims: '{format_date(date_data.get('initialClaims', ''))}',
-            gdpGrowth: '{format_date(date_data.get('gdpGrowth', ''))}',
-            industrialProduction: '{format_date(date_data.get('industrialProduction', ''))}',
-            consumerSentiment: '{format_date(date_data.get('consumerSentiment', ''))}',
-            creditSpread: '{format_date(date_data.get('creditSpread', ''))}',
-            housingStarts: '{format_date(date_data.get('housingStarts', ''))}'
-        }};"""
+    yieldCurve: '{format_date(date_data.get('yieldCurve', ''))}',
+    unemployment: '{format_date(date_data.get('unemployment', ''))}',
+    initialClaims: '{format_date(date_data.get('initialClaims', ''))}',
+    gdpGrowth: '{format_date(date_data.get('gdpGrowth', ''))}',
+    industrialProduction: '{format_date(date_data.get('industrialProduction', ''))}',
+    consumerSentiment: '{format_date(date_data.get('consumerSentiment', ''))}',
+    creditSpread: '{format_date(date_data.get('creditSpread', ''))}',
+    housingStarts: '{format_date(date_data.get('housingStarts', ''))}'
+}};"""
 
-        # Check if lastUpdatedDates exists in the file
         if 'const lastUpdatedDates' in html_content:
-            # Update existing
             html_content = re.sub(dates_pattern, new_dates, html_content)
         else:
-            # Insert after currentEconomicData
             insert_pattern = r'(const currentEconomicData = \{[^}]+\};)'
             html_content = re.sub(insert_pattern, r'\1\n        \n        ' + new_dates, html_content)
 
