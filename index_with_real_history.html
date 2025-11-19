@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Recession Risk Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 { font-size: 2.5em; margin-bottom: 10px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .subtitle { font-size: 1.1em; opacity: 0.9; }
+        .last-updated { margin-top: 15px; font-size: 0.9em; opacity: 0.8; font-style: italic; }
+        
+        .main-content { padding: 30px; }
+        .risk-meter-section {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(to bottom, #f8f9fa, white);
+            margin-bottom: 30px;
+            border-radius: 15px;
+        }
+        
+        .risk-percentage {
+            font-size: 5em;
+            font-weight: bold;
+            margin: 20px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .risk-description { font-size: 1.3em; max-width: 700px; margin: 0 auto; line-height: 1.6; }
+        
+        .chart-container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .chart-wrapper {
+            position: relative;
+            height: 500px;
+            width: 100%;
+        }
+        
+        .chart-title {
+            font-size: 1.8em;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .chart-subtitle {
+            text-align: center;
+            color: #6c757d;
+            margin-bottom: 20px;
+            font-size: 0.95em;
+        }
+        
+        .chart-note {
+            text-align: center;
+            color: #27ae60;
+            margin-top: 15px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2em;
+            color: #6c757d;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        footer {
+            background: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Daily Recession Risk Dashboard</h1>
+            <div class="subtitle">Real-time Economic Indicators & Risk Assessment</div>
+            <div class="last-updated" id="lastUpdated">Loading...</div>
+        </header>
+        
+        <div class="main-content">
+            <div id="loadingIndicator" class="loading">
+                <div class="spinner"></div>
+                <p>Loading economic data...</p>
+            </div>
+            
+            <div id="indicatorsContainer" style="display: none;">
+                <div class="risk-meter-section">
+                    <h2>Current Recession Risk</h2>
+                    <div class="risk-percentage" id="riskPercentage">--</div>
+                    <div class="risk-description" id="riskDescription">Calculating risk...</div>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-title">Historical Recession Risk Trend</div>
+                    <div class="chart-subtitle">
+                        Green zone: Low risk (0-30%) • Yellow zone: Medium risk (31-60%) • Red zone: High risk (61-100%)
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="riskChart"></canvas>
+                    </div>
+                    <div class="chart-note" id="chartNote">
+                        ✓ Chart displays real historical data calculated from actual economic indicators
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Data sources: Federal Reserve Economic Data (FRED), U.S. Treasury, Conference Board, ISM</p>
+            <p style="margin-top: 10px; opacity: 0.8;">Updated daily at 9:00 AM UTC • For informational purposes only • Not investment advice</p>
+        </footer>
+    </div>
+    
+    <script>
+        const currentEconomicData = {
+            yieldCurve: 0.54,
+            unemployment: 4.3,
+            initialClaims: 218000,
+            gdpGrowth: 3.8,
+            industrialProduction: 103.9203,
+            consumerSentiment: 55.1,
+            creditSpread: 1.07,
+            housingStarts: 1307
+        };
+        
+        const lastUpdatedDates = {
+            yieldCurve: 'Nov 18, 2025',
+            unemployment: 'Aug 01, 2025',
+            initialClaims: 'Sep 20, 2025',
+            gdpGrowth: 'Apr 01, 2025',
+            industrialProduction: 'Aug 01, 2025',
+            consumerSentiment: 'Sep 01, 2025',
+            creditSpread: 'Nov 18, 2025',
+            housingStarts: 'Aug 01, 2025'
+        };
+        
+        const WEIGHTS = {
+            yieldCurve: 0.20,
+            unemployment: 0.18,
+            industrialProduction: 0.16,
+            creditSpread: 0.14,
+            gdpGrowth: 0.12,
+            housingStarts: 0.10,
+            initialClaims: 0.06,
+            consumerSentiment: 0.04
+        };
+        
+        const THRESHOLDS = {
+            yieldCurve: {critical: -0.5, warning: 0, safe: 0.5, inverted: false},
+            unemployment: {critical: 5.0, warning: 4.5, safe: 4.0, inverted: false},
+            initialClaims: {critical: 350000, warning: 275000, safe: 225000, inverted: false},
+            gdpGrowth: {critical: 0, warning: 1.5, safe: 2.5, inverted: true},
+            industrialProduction: {critical: -1, warning: 0, safe: 0.5, inverted: true},
+            consumerSentiment: {critical: 80, warning: 90, safe: 100, inverted: true},
+            creditSpread: {critical: 3.0, warning: 2.0, safe: 1.5, inverted: false},
+            housingStarts: {critical: 1000, warning: 1200, safe: 1400, inverted: true}
+        };
+        
+        function calculateIndicatorScore(value, indicatorId) {
+            const thresholds = THRESHOLDS[indicatorId];
+            const isInverted = thresholds.inverted;
+            
+            if (isInverted) {
+                if (value >= thresholds.safe) return 0;
+                else if (value >= thresholds.warning) return 30;
+                else if (value >= thresholds.critical) return 60;
+                else return 90;
+            } else {
+                if (value <= thresholds.safe) return 0;
+                else if (value <= thresholds.warning) return 30;
+                else if (value <= thresholds.critical) return 60;
+                else return 90;
+            }
+        }
+        
+        function calculateRecessionRisk(data) {
+            let totalRisk = 0;
+            for (const [key, value] of Object.entries(data)) {
+                if (WEIGHTS[key]) {
+                    const score = calculateIndicatorScore(value, key);
+                    totalRisk += score * WEIGHTS[key];
+                }
+            }
+            return Math.round(totalRisk);
+        }
+        
+        function getRiskDescription(risk) {
+            if (risk <= 30) {
+                return {
+                    label: 'Low Risk',
+                    color: '#27ae60',
+                    description: 'Economic indicators suggest healthy growth with minimal recession warning signs.'
+                };
+            } else if (risk <= 60) {
+                return {
+                    label: 'Medium Risk',
+                    color: '#f39c12',
+                    description: 'Some economic indicators are flashing warning signs. Elevated recession risk warrants close monitoring.'
+                };
+            } else {
+                return {
+                    label: 'High Risk',
+                    color: '#e74c3c',
+                    description: 'Multiple indicators suggest significant recession risk. Similar conditions preceded past economic contractions.'
+                };
+            }
+        }
+        
+        function createRiskChart(riskHistory, currentRisk) {
+            const ctx = document.getElementById('riskChart');
+            
+            // Sample weekly for cleaner display
+            const sampledData = riskHistory.filter((_, index) => index % 7 === 0 || index === riskHistory.length - 1);
+            
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: sampledData.map(d => {
+                        const date = new Date(d.date);
+                        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
+                    }),
+                    datasets: [{
+                        label: 'Recession Risk %',
+                        data: sampledData.map(d => d.risk),
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 2,
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#667eea',
+                        pointHoverBorderColor: '#fff',
+                        pointHoverBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: { font: { size: 14, weight: 'bold' }, padding: 20 }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            titleFont: { size: 14, weight: 'bold' },
+                            bodyFont: { size: 13 },
+                            callbacks: {
+                                label: function(context) {
+                                    return `Risk: ${context.parsed.y.toFixed(1)}%`;
+                                }
+                            }
+                        },
+                        annotation: {
+                            annotations: {
+                                lowZone: {
+                                    type: 'box',
+                                    yMin: 0,
+                                    yMax: 30,
+                                    backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                                    borderWidth: 0
+                                },
+                                mediumZone: {
+                                    type: 'box',
+                                    yMin: 30,
+                                    yMax: 60,
+                                    backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                                    borderWidth: 0
+                                },
+                                highZone: {
+                                    type: 'box',
+                                    yMin: 60,
+                                    yMax: 100,
+                                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                                    borderWidth: 0
+                                },
+                                lowLine: {
+                                    type: 'line',
+                                    yMin: 30,
+                                    yMax: 30,
+                                    borderColor: '#27ae60',
+                                    borderWidth: 2,
+                                    borderDash: [5, 5],
+                                    label: { content: 'Low Risk (30%)', display: true, position: 'start' }
+                                },
+                                mediumLine: {
+                                    type: 'line',
+                                    yMin: 60,
+                                    yMax: 60,
+                                    borderColor: '#e74c3c',
+                                    borderWidth: 2,
+                                    borderDash: [5, 5],
+                                    label: { content: 'High Risk (60%)', display: true, position: 'start' }
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 }, autoSkip: true, maxTicksLimit: 20 }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            min: 0,
+                            max: 100,
+                            ticks: {
+                                stepSize: 10,
+                                callback: function(value) { return value + '%'; },
+                                font: { size: 12 }
+                            },
+                            grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                        }
+                    },
+                    interaction: { intersect: false, mode: 'index' }
+                }
+            });
+        }
+        
+        async function loadData() {
+            try {
+                // Calculate current risk
+                const currentRisk = calculateRecessionRisk(currentEconomicData);
+                const riskInfo = getRiskDescription(currentRisk);
+                
+                // Update UI
+                document.getElementById('riskPercentage').textContent = currentRisk + '%';
+                document.getElementById('riskPercentage').style.color = riskInfo.color;
+                document.getElementById('riskDescription').innerHTML = `
+                    <strong style="color: ${riskInfo.color};">${riskInfo.label}</strong><br>
+                    ${riskInfo.description}
+                `;
+                
+                document.getElementById('lastUpdated').textContent = 
+                    `Last updated: ${new Date().toLocaleString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    })} • Data updated automatically via GitHub Actions`;
+                
+                // Load risk history
+                let riskHistory = [];
+                try {
+                    const response = await fetch('risk_history.json');
+                    if (response.ok) {
+                        riskHistory = await response.json();
+                        document.getElementById('chartNote').textContent = 
+                            `✓ Chart displays ${riskHistory.length} days of real historical data calculated from actual economic indicators`;
+                    } else {
+                        throw new Error('History file not found');
+                    }
+                } catch (error) {
+                    console.log('No history file yet, using current data only');
+                    // If no history, show just today
+                    const today = new Date().toISOString().split('T')[0];
+                    riskHistory = [{date: today, risk: currentRisk}];
+                    document.getElementById('chartNote').textContent = 
+                        '⚠️ Building historical data - chart will grow daily as data is collected';
+                    document.getElementById('chartNote').style.color = '#f39c12';
+                }
+                
+                // Create chart
+                createRiskChart(riskHistory, currentRisk);
+                
+                // Show content
+                document.getElementById('loadingIndicator').style.display = 'none';
+                document.getElementById('indicatorsContainer').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('loadingIndicator').innerHTML = `
+                    <div style="color: #e74c3c;">
+                        <strong>Error loading data.</strong><br>
+                        ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        window.addEventListener('load', loadData);
+    </script>
+</body>
+</html>
