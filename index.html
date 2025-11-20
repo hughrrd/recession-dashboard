@@ -247,15 +247,17 @@
         <header>
             <h1>📊 U.S. Recession Risk Dashboard</h1>
             <div class="subtitle">Real-time Economic Indicators & Risk Assessment</div>
-            <div class="last-updated">Last Updated: November 20, 2025 at 04:49 PM ET</div>
+            <div class="last-updated" id="lastUpdated">
+                Last Updated: November 20, 2025 at 02:30 PM ET
+            </div>
         </header>
         
         <div class="main-content">
             <!-- Risk Meter -->
             <div class="risk-meter-section">
-                <div class="risk-label">Current Recession Risk</div>
-                <div class="risk-percentage">20%</div>
-                <div class="risk-description">
+                <div class="risk-label" id="riskLabel">Current Recession Risk</div>
+                <div class="risk-percentage" id="riskValue">20%</div>
+                <div class="risk-description" id="riskDescription">
                     Economy showing healthy growth with minimal recession indicators
                 </div>
                 
@@ -288,108 +290,159 @@
             <h2 style="margin-top: 40px; margin-bottom: 20px; font-size: 2em; color: #2c3e50;">Key Economic Indicators</h2>
             <div class="indicators-grid" id="indicators">
                 <!-- Indicator 1: Yield Curve -->
-                <div class="indicator-card safe">
+                <div class="indicator-card" data-indicator-id="yield_curve">
                     <div class="indicator-name">Yield Curve (10Y-2Y)</div>
-                    <div class="indicator-value">+0.54%</div>
+                    <div class="indicator-value">—</div>
+                
                     <div class="indicator-details">
-                        <div>Status: ✅ Safe</div>
-                        <div>Update Frequency: Daily</div>
+                        <div>Status: —</div>
                     </div>
+                
+                    <div class="js-indicator-meta">
+                        Update Frequency: Daily • Last Updated: —
+                    </div>
+                
                     <div class="indicator-description">
-                        Difference between 10-year and 2-year Treasury yields. Inversion (negative values) historically precedes recessions by 12-18 months.
+                        Difference between 10-year and 2-year Treasury yields. Inversion (negative values)
+                        historically precedes recessions by 12–18 months.
                     </div>
                 </div>
                 
                 <!-- Indicator 2: Unemployment Rate -->
-                <div class="indicator-card safe">
+                <div class="indicator-card" data-indicator-id="unemployment">
                     <div class="indicator-name">Unemployment Rate</div>
-                    <div class="indicator-value">4.4%</div>
+                    <div class="indicator-value">—</div>
+                
                     <div class="indicator-details">
-                        <div>Status: ✅ Safe</div>
-                        <div>Update Frequency: Monthly</div>
+                        <div>Status: —</div>
                     </div>
+                
+                    <div class="js-indicator-meta">
+                        Update Frequency: Monthly • Last Updated: —
+                    </div>
+                
                     <div class="indicator-description">
-                        Percentage of workforce actively seeking employment. Rapid increases of 0.5%+ in 3 months typically signal recession.
+                        Percentage of workforce actively seeking employment. Rapid increases of 0.5% or more
+                        within 3 months often signal accelerating recession risk.
                     </div>
                 </div>
                 
                 <!-- Indicator 3: Initial Jobless Claims -->
-                <div class="indicator-card safe">
+                <div class="indicator-card" data-indicator-id="initial_claims">
                     <div class="indicator-name">Initial Jobless Claims</div>
-                    <div class="indicator-value">220,000</div>
+                    <div class="indicator-value">—</div>
+                
                     <div class="indicator-details">
-                        <div>Status: ✅ Safe</div>
-                        <div>Update Frequency: Weekly</div>
+                        <div>Status: —</div>
                     </div>
+                
+                    <div class="js-indicator-meta">
+                        Update Frequency: Weekly • Last Updated: —
+                    </div>
+                
                     <div class="indicator-description">
-                        Weekly new unemployment insurance claims. Sustained increases above 300k typically signal labor market deterioration.
+                        Weekly new unemployment filings. Sustained increases above 300,000 typically indicate
+                        labor market deterioration and rising recession risk.
                     </div>
                 </div>
                 
                 <!-- Indicator 4: GDP Growth -->
-                <div class="indicator-card safe">
+                <div class="indicator-card" data-indicator-id="gdp_growth">
                     <div class="indicator-name">Real GDP Growth</div>
-                    <div class="indicator-value">3.8%</div>
+                    <div class="indicator-value">—</div>
+                
                     <div class="indicator-details">
-                        <div>Status: ✅ Safe</div>
-                        <div>Update Frequency: Quarterly</div>
+                        <div>Status: —</div>
                     </div>
+                
+                    <div class="js-indicator-meta">
+                        Update Frequency: Quarterly • Last Updated: —
+                    </div>
+                
                     <div class="indicator-description">
-                        Inflation-adjusted economic growth rate. Two consecutive negative quarters technically define a recession.
+                        Inflation-adjusted economic growth rate. Two consecutive negative quarters historically
+                        define recessions, though NBER uses broader criteria.
                     </div>
                 </div>
                 
                 <!-- Indicator 5: Industrial Production -->
-                <div class="indicator-card safe">
+                <div class="indicator-card" data-indicator-id="industrial_production">
                     <div class="indicator-name">Industrial Production</div>
-                    <div class="indicator-value">103.9203</div>
+                    <div class="indicator-value">—</div>
+                
                     <div class="indicator-details">
-                        <div>Status: ✅ Safe</div>
-                        <div>Update Frequency: Monthly</div>
+                        <div>Status: —</div>
                     </div>
+                
+                    <div class="js-indicator-meta">
+                        Update Frequency: Monthly • Last Updated: —
+                    </div>
+                
                     <div class="indicator-description">
-                        Manufacturing, mining, and utilities output index. Declining values suggest economic contraction.
+                        Index of output for manufacturing, mining, and utilities. Persistent declines reflect
+                        weakening real economic activity and are common pre-recession.
                     </div>
                 </div>
                 
                 <!-- Indicator 6: Consumer Sentiment -->
-                <div class="indicator-card safe">
+                <div class="indicator-card" data-indicator-id="consumer_sentiment">
                     <div class="indicator-name">Consumer Sentiment</div>
-                    <div class="indicator-value">55.1</div>
+                    <div class="indicator-value">—</div>
+                
                     <div class="indicator-details">
-                        <div>Status: ✅ Safe</div>
-                        <div>Update Frequency: Monthly</div>
+                        <div>Status: —</div>
                     </div>
+                
+                    <div class="js-indicator-meta">
+                        Update Frequency: Monthly • Last Updated: —
+                    </div>
+                
                     <div class="indicator-description">
-                        Survey of consumer expectations. Sharp declines below 90 often precede reduced consumer spending and recession.
+                        UMich survey measuring consumer expectations. Sharp declines often precede reductions
+                        in spending and rising recession probability.
                     </div>
                 </div>
+
                 
                 <!-- Indicator 7: Credit Spread -->
-                <div class="indicator-card safe">
+                <div class="indicator-card" data-indicator-id="bbb_credit_spread">
                     <div class="indicator-name">BBB Credit Spread</div>
-                    <div class="indicator-value">1.07%</div>
+                    <div class="indicator-value">—</div>
+                
                     <div class="indicator-details">
-                        <div>Status: ✅ Safe</div>
-                        <div>Update Frequency: Daily</div>
+                        <div>Status: —</div>
                     </div>
+                
+                    <div class="js-indicator-meta">
+                        Update Frequency: Daily • Last Updated: —
+                    </div>
+                
                     <div class="indicator-description">
-                        BBB corporate bond yield over Treasury. Widening spreads above 2.5% indicate increased credit risk and financial stress.
+                        Yield spread between BBB-rated corporate bonds and Treasuries. Widening spreads
+                        indicate rising credit risk and financial stress.
                     </div>
                 </div>
+
                 
                 <!-- Indicator 8: Housing Starts -->
-                <div class="indicator-card safe">
+                <div class="indicator-card" data-indicator-id="housing_starts">
                     <div class="indicator-name">Housing Starts</div>
-                    <div class="indicator-value">1307.0K</div>
+                    <div class="indicator-value">—</div>
+                
                     <div class="indicator-details">
-                        <div>Status: ✅ Safe</div>
-                        <div>Update Frequency: Monthly</div>
+                        <div>Status: —</div>
                     </div>
+                
+                    <div class="js-indicator-meta">
+                        Update Frequency: Monthly • Last Updated: —
+                    </div>
+                
                     <div class="indicator-description">
-                        New residential construction projects started. Sharp declines often signal weakening economy and reduced consumer confidence.
+                        Number of new residential construction projects started. Major slowdowns frequently
+                        signal weakening demand and recession conditions.
                     </div>
                 </div>
+
             </div>
             
             <!-- Historical Context -->
