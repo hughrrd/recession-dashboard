@@ -1,0 +1,98 @@
+{
+  "generated_at": "2025-11-20T16:49:41",
+  "risk": {
+    "value": null,
+    "date": "2025-11-20"
+  },
+  "indicators": [
+    {
+      "name": "Yield Curve (10Y-2Y)",
+      "id": "yield_curve",
+      "series_ids": [
+        "DGS10",
+        "DGS2"
+      ],
+      "frequency": "Daily",
+      "value": 0.54,
+      "units": "percentage points",
+      "last_updated": "2025-11-18"
+    },
+    {
+      "name": "Unemployment Rate",
+      "id": "unemployment",
+      "series_ids": [
+        "UNRATE"
+      ],
+      "frequency": "Monthly",
+      "value": 4.4,
+      "units": "percent",
+      "last_updated": "2025-09-01"
+    },
+    {
+      "name": "Initial Jobless Claims",
+      "id": "initial_claims",
+      "series_ids": [
+        "ICSA"
+      ],
+      "frequency": "Weekly",
+      "value": 220000,
+      "units": "claims",
+      "last_updated": "2025-11-15"
+    },
+    {
+      "name": "Real GDP Growth",
+      "id": "gdp_growth",
+      "series_ids": [
+        "A191RL1Q225SBEA"
+      ],
+      "frequency": "Quarterly",
+      "value": 3.8,
+      "units": "percent (annual rate)",
+      "last_updated": "2025-04-01"
+    },
+    {
+      "name": "Industrial Production",
+      "id": "industrial_production",
+      "series_ids": [
+        "INDPRO"
+      ],
+      "frequency": "Monthly",
+      "value": 103.9203,
+      "units": "index (2017=100)",
+      "last_updated": "2025-08-01"
+    },
+    {
+      "name": "Consumer Sentiment",
+      "id": "consumer_sentiment",
+      "series_ids": [
+        "UMCSENT"
+      ],
+      "frequency": "Monthly",
+      "value": 55.1,
+      "units": "index",
+      "last_updated": "2025-09-01"
+    },
+    {
+      "name": "BBB Credit Spread",
+      "id": "bbb_credit_spread",
+      "series_ids": [
+        "BAMLC0A4CBBB"
+      ],
+      "frequency": "Daily",
+      "value": 1.07,
+      "units": "percentage points over Treasuries",
+      "last_updated": "2025-11-19"
+    },
+    {
+      "name": "Housing Starts",
+      "id": "housing_starts",
+      "series_ids": [
+        "HOUST"
+      ],
+      "frequency": "Monthly",
+      "value": 1307.0,
+      "units": "thousands of units (SAAR)",
+      "last_updated": "2025-08-01"
+    }
+  ]
+}
