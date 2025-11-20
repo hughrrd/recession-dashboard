@@ -89,6 +89,95 @@ jobs:
         print(f'Credit Spread: {credit_spread}% (as of {date_credit})')
         print(f'Housing Starts: {housing_starts}K (as of {date_housing})')
 
+        # Build current indicators payload for the frontend
+        current_indicators = {
+            "generated_at": datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
+            "risk": {
+                "value": round(risk, 1) if 'risk' in globals() else None,
+                "date": datetime.now().strftime('%Y-%m-%d')
+            },
+            "indicators": [
+                {
+                    "name": "Yield Curve (10Y-2Y)",
+                    "id": "yield_curve",
+                    "series_ids": ["DGS10", "DGS2"],
+                    "frequency": "Daily",
+                    "value": round(float(yield_10y) - float(yield_2y), 2) if yield_10y and yield_2y else None,
+                    "units": "percentage points",
+                    "last_updated": min(date_10y, date_2y) if date_10y and date_2y else None
+                },
+                {
+                    "name": "Unemployment Rate",
+                    "id": "unemployment",
+                    "series_ids": ["UNRATE"],
+                    "frequency": "Monthly",
+                    "value": float(unemployment) if unemployment else None,
+                    "units": "percent",
+                    "last_updated": date_unemp
+                },
+                {
+                    "name": "Initial Jobless Claims",
+                    "id": "initial_claims",
+                    "series_ids": ["ICSA"],
+                    "frequency": "Weekly",
+                    "value": int(float(initial_claims)) if initial_claims else None,
+                    "units": "claims",
+                    "last_updated": date_claims
+                },
+                {
+                    "name": "Real GDP Growth",
+                    "id": "gdp_growth",
+                    "series_ids": ["A191RL1Q225SBEA"],
+                    "frequency": "Quarterly",
+                    "value": float(gdp_growth) if gdp_growth else None,
+                    "units": "percent (annual rate)",
+                    "last_updated": date_gdp
+                },
+                {
+                    "name": "Industrial Production",
+                    "id": "industrial_production",
+                    "series_ids": ["INDPRO"],
+                    "frequency": "Monthly",
+                    "value": float(industrial_prod) if industrial_prod else None,
+                    "units": "index (2017=100)",
+                    "last_updated": date_ind
+                },
+                {
+                    "name": "Consumer Sentiment",
+                    "id": "consumer_sentiment",
+                    "series_ids": ["UMCSENT"],
+                    "frequency": "Monthly",
+                    "value": float(consumer_sentiment) if consumer_sentiment else None,
+                    "units": "index",
+                    "last_updated": date_cons
+                },
+                {
+                    "name": "BBB Credit Spread",
+                    "id": "bbb_credit_spread",
+                    "series_ids": ["BAMLC0A4CBBB"],
+                    "frequency": "Daily",
+                    "value": float(credit_spread) if credit_spread else None,
+                    "units": "percentage points over Treasuries",
+                    "last_updated": date_credit
+                },
+                {
+                    "name": "Housing Starts",
+                    "id": "housing_starts",
+                    "series_ids": ["HOUST"],
+                    "frequency": "Monthly",
+                    "value": float(housing_starts) if housing_starts else None,
+                    "units": "thousands of units (SAAR)",
+                    "last_updated": date_housing
+                }
+            ]
+        }
+
+        # Save current indicators
+        with open('current_indicators.json', 'w') as f:
+            json.dump(current_indicators, f, indent=2)
+        print('Saved current indicators to current_indicators.json')
+
+
         # Calculate yield curve
         yield_curve = None
         if yield_10y and yield_2y:
