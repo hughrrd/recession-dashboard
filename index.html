@@ -240,6 +240,160 @@
             margin: 5px 0;
             font-size: 0.9em;
         }
+        .methodology-section {
+            margin-top: 40px;
+            padding: 30px;
+            border-radius: 15px;
+            background: #f8f9fb;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .methodology-title {
+            font-size: 2em;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .methodology-intro {
+            font-size: 0.98em;
+            color: #555;
+            max-width: 800px;
+            line-height: 1.5;
+            margin-bottom: 25px;
+        }
+
+        .methodology-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr);
+            gap: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .methodology-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .methodology-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 20px 22px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            border-left: 4px solid #3498db;
+        }
+
+        .methodology-card h3 {
+            font-size: 1.15em;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            margin-top: 10px;
+        }
+
+        .methodology-card p {
+            font-size: 0.95em;
+            color: #555;
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+
+        .methodology-list {
+            margin: 8px 0 16px 18px;
+            font-size: 0.93em;
+            color: #555;
+        }
+
+        .methodology-list li {
+            margin-bottom: 4px;
+        }
+
+        .formula-box {
+            background: #f0f4ff;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin: 10px 0 16px;
+            border: 1px solid rgba(52,152,219,0.3);
+            font-size: 0.95em;
+            overflow-x: auto;
+        }
+
+        .formula-box code {
+            font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            color: #2c3e50;
+        }
+
+        .pill {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.75em;
+            font-weight: 600;
+            vertical-align: middle;
+        }
+
+        .pill-safe {
+            background: rgba(39,174,96,0.12);
+            color: #27ae60;
+        }
+
+        .pill-risk {
+            background: rgba(231,76,60,0.12);
+            color: #e74c3c;
+        }
+
+        .methodology-note {
+            font-size: 0.85em;
+            color: #777;
+            font-style: italic;
+            margin-bottom: 12px;
+        }
+
+        .indicator-formula {
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed rgba(0,0,0,0.05);
+        }
+
+        .indicator-formula:last-of-type {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .indicator-formula h4 {
+            font-size: 0.98em;
+            color: #34495e;
+            margin-bottom: 4px;
+        }
+
+        .indicator-formula p {
+            margin-bottom: 4px;
+        }
+
+        .indicator-formula ul {
+            margin-left: 18px;
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        .indicator-formula li {
+            margin-bottom: 2px;
+        }
+
+        .indicator-formula code {
+            font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.88em;
+            background: rgba(0,0,0,0.03);
+            padding: 1px 4px;
+            border-radius: 4px;
+        }
+
+        .methodology-footnote {
+            margin-top: 10px;
+            font-size: 0.85em;
+            color: #777;
+            font-style: italic;
+        }
+
+
     </style>
 </head>
 <body>
@@ -538,6 +692,125 @@
                 </div>
             </div>
             
+            <!-- How the Recession Risk Score Is Calculated -->
+            <section class="methodology-section" id="risk-methodology">
+                <h2 class="methodology-title">📐 How the Recession Risk Score Is Calculated</h2>
+                <p class="methodology-intro">
+                    The Recession Risk Score is a composite indicator built from eight key U.S. economic series
+                    (Treasury yields, unemployment, jobless claims, GDP, industrial production, consumer sentiment,
+                    credit spreads, and housing starts). The formula is transparent so anyone can reproduce it
+                    directly from FRED data.
+                </p>
+
+                <div class="methodology-grid">
+                    <!-- Left: High-level steps -->
+                    <div class="methodology-card">
+                        <h3>1. Start from a baseline</h3>
+                        <p>
+                            We begin with a neutral baseline risk of <strong>15%</strong>. This represents a
+                            normal, healthy-growth environment with no strong recession signals.
+                        </p>
+
+                        <div class="formula-box">
+                            <code>risk = 15</code>
+                        </div>
+
+                        <h3>2. Adjust using key indicators</h3>
+                        <p>
+                            Each indicator nudges the score up or down depending on whether it looks
+                            <span class="pill pill-safe">supportive</span> or
+                            <span class="pill pill-risk">stressful</span> for the economy.
+                        </p>
+                        <ul class="methodology-list">
+                            <li><strong>Yield curve:</strong> inversions add risk; steep positive curves reduce it.</li>
+                            <li><strong>Labor market:</strong> rising unemployment and jobless claims add risk.</li>
+                            <li><strong>Growth:</strong> weak or negative real GDP adds risk.</li>
+                            <li><strong>Sentiment:</strong> pessimistic consumers add risk.</li>
+                            <li><strong>Credit spreads:</strong> wider BBB spreads add risk.</li>
+                        </ul>
+
+                        <h3>3. Clamp to a realistic range</h3>
+                        <p>
+                            Finally, the score is bounded between <strong>5%</strong> and <strong>95%</strong>
+                            to avoid implying either zero probability or absolute certainty.
+                        </p>
+
+                        <div class="formula-box">
+                            <code>risk = max(5, min(95, risk))</code>
+                        </div>
+                    </div>
+
+                    <!-- Right: Exact formula details -->
+                    <div class="methodology-card">
+                        <h3>Exact scoring rules (per day)</h3>
+                        <p class="methodology-note">
+                            All data come from FRED. Series IDs are shown in parentheses.
+                        </p>
+
+                        <div class="indicator-formula">
+                            <h4>Yield Curve (10Y – 2Y) — DGS10 &amp; DGS2</h4>
+                            <p>
+                                Let <code>yc = 10Y − 2Y</code> (in percentage points):
+                            </p>
+                            <ul>
+                                <li>If <code>yc &lt; -0.5</code> → <code>risk += 25</code></li>
+                                <li>Else if <code>yc &lt; 0</code> → <code>risk += |yc| × 30</code></li>
+                                <li>Else if <code>yc &gt; 0.5</code> → <code>risk −= 5</code></li>
+                            </ul>
+                        </div>
+
+                        <div class="indicator-formula">
+                            <h4>Unemployment Rate — UNRATE</h4>
+                            <p>Let <code>u = UNRATE</code> (percent):</p>
+                            <ul>
+                                <li>If <code>u &gt; 5.0</code> → <code>risk += (u − 5.0) × 8</code></li>
+                                <li>Else if <code>u &lt; 4.0</code> → <code>risk −= 3</code></li>
+                            </ul>
+                        </div>
+
+                        <div class="indicator-formula">
+                            <h4>Initial Jobless Claims — ICSA</h4>
+                            <p>Let <code>c = ICSA</code> (weekly claims):</p>
+                            <ul>
+                                <li>If <code>c &gt; 300,000</code> → <code>risk += (c − 300,000) / 10,000</code></li>
+                            </ul>
+                        </div>
+
+                        <div class="indicator-formula">
+                            <h4>Real GDP Growth — A191RL1Q225SBEA</h4>
+                            <p>Let <code>g = real GDP growth</code> (%, annual rate):</p>
+                            <ul>
+                                <li>If <code>g &lt; 0</code> → <code>risk += 15</code></li>
+                                <li>Else if <code>0 ≤ g &lt; 2.0</code> → <code>risk += (2.0 − g) × 5</code></li>
+                            </ul>
+                        </div>
+
+                        <div class="indicator-formula">
+                            <h4>Consumer Sentiment — UMCSENT</h4>
+                            <p>Let <code>cs = UMCSENT</code> (index):</p>
+                            <ul>
+                                <li>If <code>cs &lt; 70</code> → <code>risk += 10</code></li>
+                                <li>Else if <code>70 ≤ cs &lt; 90</code> → <code>risk += (90 − cs) / 4</code></li>
+                            </ul>
+                        </div>
+
+                        <div class="indicator-formula">
+                            <h4>BBB Credit Spread — BAMLC0A4CBBB</h4>
+                            <p>Let <code>s = BBB spread</code> (percentage points over Treasuries):</p>
+                            <ul>
+                                <li>If <code>s &gt; 2.5</code> → <code>risk += (s − 2.5) × 8</code></li>
+                            </ul>
+                        </div>
+
+                        <p class="methodology-footnote">
+                            Industrial production (INDPRO) and housing starts (HOUST) are displayed on the dashboard
+                            as context indicators but do not currently enter the numerical risk formula above.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+
             <div class="chart-container">
                 <div class="chart-title">Recession Risk Trend (Past 2 Years)</div>
                 <div class="chart-subtitle">
