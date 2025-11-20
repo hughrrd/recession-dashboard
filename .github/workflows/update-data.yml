@@ -168,26 +168,25 @@ jobs:
                 history = json.load(f)
             print(f'Loaded {len(history)} historical records')
         except FileNotFoundError:
-            print('No history file found, creating new one')
-            # Generate 2 years of synthetic historical data
-            for i in range(730, 0, -1):
-                past_date = (datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d')
-                base_risk = 20 + (i % 60) / 3
-                if i < 100:
-                    base_risk += 10
-                history.append({
-                    'date': past_date,
-                    'risk': round(base_risk, 1)
-                })
+            print('No history file found, starting with empty history (no synthetic data)')
+            history = []
 
+
+        # Remove any existing entry for today's date
+        history = [h for h in history if h.get('date') != current_date]
+        
         # Add today's data point
         history.append({
             'date': current_date,
             'risk': round(risk, 1)
         })
-
-        # Keep only last 730 days (2 years)
+        
+        # Sort by date to be safe
+        history.sort(key=lambda x: x['date'])
+        
+        # Keep only last 730 days
         history = history[-730:]
+
 
         # Save updated history
         with open('risk_history.json', 'w') as f:
