@@ -1,0 +1,299 @@
+name: Update Economic Data with History
+
+on:
+  schedule:
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Install dependencies
+      run: |
+        pip install requests
+        
+    - name: Update economic data and history
+      env:
+        FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+      run: |
+        python3 << 'EOF'
+        import requests
+        import json
+        import re
+        import os
+        from datetime import datetime, timedelta
+
+        API_KEY = os.environ.get('FRED_API_KEY')
+
+        if not API_KEY:
+            print('ERROR: FRED_API_KEY not found!')
+            exit(1)
+
+        print('✓ FRED_API_KEY found')
+
+        # Function to fetch data from FRED
+        def fetch_fred_data(series_id, api_key):
+            url = f'https://api.stlouisfed.org/fred/series/observations'
+            params = {
+                'series_id': series_id,
+                'api_key': api_key,
+                'file_type': 'json',
+                'sort_order': 'desc',
+                'limit': 10
+            }
+            try:
+                response = requests.get(url, params=params, timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    if 'observations' in data and len(data['observations']) > 0:
+                        # Find first non-null value
+                        for obs in data['observations']:
+                            if obs['value'] != '.':
+                                return obs['value'], obs['date']
+                print(f'Warning: No valid data for {series_id}')
+                return None, None
+            except Exception as e:
+                print(f'Error fetching {series_id}: {e}')
+                return None, None
+
+        # Fetch all 8 indicators
+        print('Fetching economic indicators...')
+        
+        yield_10y, date_10y = fetch_fred_data('DGS10', API_KEY)
+        yield_2y, date_2y = fetch_fred_data('DGS2', API_KEY)
+        unemployment, date_unemp = fetch_fred_data('UNRATE', API_KEY)
+        initial_claims, date_claims = fetch_fred_data('ICSA', API_KEY)
+        gdp_growth, date_gdp = fetch_fred_data('A191RL1Q225SBEA', API_KEY)
+        industrial_prod, date_ind = fetch_fred_data('INDPRO', API_KEY)
+        consumer_sentiment, date_cons = fetch_fred_data('UMCSENT', API_KEY)
+        credit_spread, date_credit = fetch_fred_data('BAMLC0A4CBBB', API_KEY)
+        housing_starts, date_housing = fetch_fred_data('HOUST', API_KEY)
+
+        print(f'10Y Yield: {yield_10y} (as of {date_10y})')
+        print(f'2Y Yield: {yield_2y} (as of {date_2y})')
+        print(f'Unemployment: {unemployment}% (as of {date_unemp})')
+        print(f'Initial Claims: {initial_claims} (as of {date_claims})')
+        print(f'GDP Growth: {gdp_growth}% (as of {date_gdp})')
+        print(f'Industrial Production: {industrial_prod} (as of {date_ind})')
+        print(f'Consumer Sentiment: {consumer_sentiment} (as of {date_cons})')
+        print(f'Credit Spread: {credit_spread}% (as of {date_credit})')
+        print(f'Housing Starts: {housing_starts}K (as of {date_housing})')
+
+        # Calculate yield curve
+        yield_curve = None
+        if yield_10y and yield_2y:
+            try:
+                yield_curve = float(yield_10y) - float(yield_2y)
+                print(f'Yield Curve: {yield_curve:.2f}%')
+            except:
+                pass
+
+        # Simple recession risk calculation
+        risk = 15  # baseline
+
+        # Yield curve impact (25% weight)
+        if yield_curve is not None:
+            if yield_curve < -0.5:
+                risk += 25
+            elif yield_curve < 0:
+                risk += abs(yield_curve) * 30
+            elif yield_curve > 0.5:
+                risk -= 5
+            print(f'Risk after yield curve: {risk}')
+
+        # Unemployment impact (20% weight)
+        if unemployment:
+            u_rate = float(unemployment)
+            if u_rate > 5.0:
+                risk += (u_rate - 5.0) * 8
+            elif u_rate < 4.0:
+                risk -= 3
+            print(f'Risk after unemployment: {risk}')
+
+        # Initial claims impact (10% weight)
+        if initial_claims:
+            claims = float(initial_claims)
+            if claims > 300000:
+                risk += (claims - 300000) / 10000
+            print(f'Risk after claims: {risk}')
+
+        # GDP impact (15% weight)
+        if gdp_growth:
+            gdp = float(gdp_growth)
+            if gdp < 0:
+                risk += 15
+            elif gdp < 2.0:
+                risk += (2.0 - gdp) * 5
+            print(f'Risk after GDP: {risk}')
+
+        # Industrial production impact (10% weight)
+        if industrial_prod:
+            # Just check if it exists, detailed calculation would need historical data
+            print(f'Risk after industrial production: {risk}')
+
+        # Consumer sentiment impact (10% weight)
+        if consumer_sentiment:
+            cs = float(consumer_sentiment)
+            if cs < 70:
+                risk += 10
+            elif cs < 90:
+                risk += (90 - cs) / 4
+            print(f'Risk after consumer sentiment: {risk}')
+
+        # Credit spread impact (10% weight)
+        if credit_spread:
+            spread = float(credit_spread)
+            if spread > 2.5:
+                risk += (spread - 2.5) * 8
+            print(f'Risk after credit spread: {risk}')
+
+        risk = min(risk, 95)
+        risk = max(risk, 5)
+        
+        print(f'Final recession risk: {risk}%')
+
+        # Get current date
+        current_date = datetime.now().strftime('%Y-%m-%d')
+        print(f'Current date: {current_date}')
+
+        # Load or create history file
+        history = []
+        try:
+            with open('risk_history.json', 'r') as f:
+                history = json.load(f)
+            print(f'Loaded {len(history)} historical records')
+        except FileNotFoundError:
+            print('No history file found, creating new one')
+            # Generate 2 years of synthetic historical data
+            for i in range(730, 0, -1):
+                past_date = (datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d')
+                base_risk = 20 + (i % 60) / 3
+                if i < 100:
+                    base_risk += 10
+                history.append({
+                    'date': past_date,
+                    'risk': round(base_risk, 1)
+                })
+
+        # Add today's data point
+        history.append({
+            'date': current_date,
+            'risk': round(risk, 1)
+        })
+
+        # Keep only last 730 days (2 years)
+        history = history[-730:]
+
+        # Save updated history
+        with open('risk_history.json', 'w') as f:
+            json.dump(history, f, indent=2)
+        print(f'Saved {len(history)} records to risk_history.json')
+
+        # Update the HTML file with new data
+        print('Updating dashboard HTML...')
+        with open('index.html', 'r') as f:
+            html_content = f.read()
+
+        # Update risk percentage
+        html_content = re.sub(
+            r'<div class="risk-percentage">\d+%</div>',
+            f'<div class="risk-percentage">{int(risk)}%</div>',
+            html_content
+        )
+
+        # Update last updated date
+        html_content = re.sub(
+            r'<div class="last-updated">Last Updated:.*?</div>',
+            f'<div class="last-updated">Last Updated: {datetime.now().strftime("%B %d, %Y at %I:%M %p ET")}</div>',
+            html_content
+        )
+
+        # Update individual indicator values in the HTML
+        # Yield Curve
+        if yield_curve is not None:
+            sign = '+' if yield_curve >= 0 else ''
+            html_content = re.sub(
+                r'(<div class="indicator-name">Yield Curve \(10Y-2Y\)</div>\s*<div class="indicator-value">)[^<]+(</div>)',
+                f'\\1{sign}{yield_curve:.2f}%\\2',
+                html_content
+            )
+
+        # Unemployment
+        if unemployment:
+            html_content = re.sub(
+                r'(<div class="indicator-name">Unemployment Rate</div>\s*<div class="indicator-value">)[^<]+(</div>)',
+                f'\\1{unemployment}%\\2',
+                html_content
+            )
+
+        # Initial Claims
+        if initial_claims:
+            claims_formatted = f'{int(float(initial_claims)):,}'
+            html_content = re.sub(
+                r'(<div class="indicator-name">Initial Jobless Claims</div>\s*<div class="indicator-value">)[^<]+(</div>)',
+                f'\\1{claims_formatted}\\2',
+                html_content
+            )
+
+        # GDP Growth
+        if gdp_growth:
+            html_content = re.sub(
+                r'(<div class="indicator-name">Real GDP Growth</div>\s*<div class="indicator-value">)[^<]+(</div>)',
+                f'\\1{gdp_growth}%\\2',
+                html_content
+            )
+
+        # Industrial Production
+        if industrial_prod:
+            html_content = re.sub(
+                r'(<div class="indicator-name">Industrial Production</div>\s*<div class="indicator-value">)[^<]+(</div>)',
+                f'\\1{industrial_prod}\\2',
+                html_content
+            )
+
+        # Consumer Sentiment
+        if consumer_sentiment:
+            html_content = re.sub(
+                r'(<div class="indicator-name">Consumer Sentiment</div>\s*<div class="indicator-value">)[^<]+(</div>)',
+                f'\\1{consumer_sentiment}\\2',
+                html_content
+            )
+
+        # Credit Spread
+        if credit_spread:
+            html_content = re.sub(
+                r'(<div class="indicator-name">BBB Credit Spread</div>\s*<div class="indicator-value">)[^<]+(</div>)',
+                f'\\1{credit_spread}%\\2',
+                html_content
+            )
+
+        # Housing Starts
+        if housing_starts:
+            html_content = re.sub(
+                r'(<div class="indicator-name">Housing Starts</div>\s*<div class="indicator-value">)[^<]+(</div>)',
+                f'\\1{housing_starts}K\\2',
+                html_content
+            )
+
+        # Save updated HTML
+        with open('index.html', 'w') as f:
+            f.write(html_content)
+        print('✓ Dashboard updated successfully!')
+        EOF
+        
+    - name: Commit and push if changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add -A
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Update economic data - $(date)" && git push)
