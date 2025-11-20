@@ -1,7 +1,7 @@
 {
-  "generated_at": "2025-11-20T16:49:41",
+  "generated_at": "2025-11-20T21:09:36",
   "risk": {
-    "value": null,
+    "value": 20,
     "date": "2025-11-20"
   },
   "indicators": [
