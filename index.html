@@ -493,173 +493,389 @@
         </div>
     </div>
     
-    <script>
-        // Load and display risk history chart
-        async function createRiskChart() {
-            try {
-                console.log('Fetching risk history data...');
-                const response = await fetch('risk_history.json');
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const history = await response.json();
-                console.log('Loaded data points:', history.length);
-                
-                if (!history || history.length === 0) {
-                    throw new Error('No data in history file');
-                }
-                
-                const ctx = document.getElementById('riskChart');
-                if (!ctx) {
-                    throw new Error('Canvas element not found');
-                }
-                
-                // Get color based on risk value - simpler approach
-                const getLineColor = (value) => {
-                    if (value < 30) return '#27ae60';
-                    if (value < 60) return '#f39c12';
-                    return '#e74c3c';
+        <script>
+        // --------- Helper: risk tier label & description ----------
+        function getRiskTier(risk) {
+            if (risk == null || isNaN(risk)) {
+                return {
+                    label: 'Recession Risk (Unavailable)',
+                    description: 'Risk cannot be computed because one or more indicators are missing.'
                 };
-                
-                new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: history.map(d => d.date),
-                        datasets: [{
-                            label: 'Recession Risk %',
-                            data: history.map(d => d.risk),
-                            borderColor: '#3498db',
-                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                            borderWidth: 2,
-                            fill: true,
-                            tension: 0.4,
-                            pointRadius: 0,
-                            pointHoverRadius: 6,
-                            pointBackgroundColor: '#3498db',
-                            pointBorderColor: '#fff',
-                            pointBorderWidth: 2
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: false
-                            },
-                            tooltip: {
-                                mode: 'index',
-                                intersect: false,
-                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                padding: 12,
-                                cornerRadius: 6,
-                                titleFont: {
-                                    size: 14,
-                                    weight: 'bold'
-                                },
-                                bodyFont: {
-                                    size: 13
-                                },
-                                callbacks: {
-                                    label: function(context) {
-                                        return 'Risk: ' + context.parsed.y.toFixed(1) + '%';
-                                    }
-                                }
-                            },
-                            annotation: {
-                                annotations: {
-                                    lowRisk: {
-                                        type: 'box',
-                                        yMin: 0,
-                                        yMax: 30,
-                                        backgroundColor: 'rgba(39, 174, 96, 0.08)',
-                                        borderWidth: 0
-                                    },
-                                    mediumRisk: {
-                                        type: 'box',
-                                        yMin: 30,
-                                        yMax: 60,
-                                        backgroundColor: 'rgba(243, 156, 18, 0.08)',
-                                        borderWidth: 0
-                                    },
-                                    highRisk: {
-                                        type: 'box',
-                                        yMin: 60,
-                                        yMax: 100,
-                                        backgroundColor: 'rgba(231, 76, 60, 0.08)',
-                                        borderWidth: 0
-                                    }
-                                }
-                            }
-                        },
-                        scales: {
-                            x: {
-                                display: true,
-                                title: {
-                                    display: true,
-                                    text: 'Date',
-                                    font: {
-                                        size: 13,
-                                        weight: 'bold'
-                                    }
-                                },
-                                ticks: {
-                                    maxTicksLimit: 12,
-                                    font: {
-                                        size: 11
-                                    }
-                                },
-                                grid: {
-                                    display: false
-                                }
-                            },
-                            y: {
-                                display: true,
-                                title: {
-                                    display: true,
-                                    text: 'Recession Risk %',
-                                    font: {
-                                        size: 13,
-                                        weight: 'bold'
-                                    }
-                                },
-                                min: 0,
-                                max: 100,
-                                ticks: {
-                                    font: {
-                                        size: 11
-                                    },
-                                    callback: function(value) {
-                                        return value + '%';
-                                    }
-                                },
-                                grid: {
-                                    color: 'rgba(0, 0, 0, 0.05)'
-                                }
-                            }
-                        },
-                        interaction: {
-                            mode: 'nearest',
-                            axis: 'x',
-                            intersect: false
-                        }
-                    }
-                });
-                
-                console.log('✅ Chart created successfully!');
-                
-            } catch (error) {
-                console.error('❌ Error creating chart:', error);
+            }
+    
+            if (risk < 30) {
+                return {
+                    label: 'Low Recession Risk',
+                    description: 'Economy showing healthy growth with minimal recession indicators.'
+                };
+            } else if (risk < 60) {
+                return {
+                    label: 'Medium Recession Risk',
+                    description: 'Some early warning signs are emerging—conditions bear watching.'
+                };
+            } else {
+                return {
+                    label: 'High Recession Risk',
+                    description: 'Multiple indicators point to elevated recession risk in the near term.'
+                };
             }
         }
-        
-        // Initialize when page loads
-        window.addEventListener('load', function() {
-            console.log('Page loaded, initializing chart...');
-            createRiskChart();
-        });
+    
+        // --------- Helper: format indicator values ----------
+        function formatIndicatorValue(id, value) {
+            if (value == null || isNaN(value)) return '—';
+            value = Number(value);
+    
+            switch (id) {
+                case 'yield_curve':
+                    return (value >= 0 ? '+' : '') + value.toFixed(2) + '%';
+                case 'unemployment':
+                    return value.toFixed(1) + '%';
+                case 'initial_claims':
+                    return Math.round(value).toLocaleString('en-US');
+                case 'gdp_growth':
+                    return value.toFixed(1) + '%';
+                case 'industrial_production':
+                    return value.toFixed(1);
+                case 'consumer_sentiment':
+                    return value.toFixed(1);
+                case 'bbb_credit_spread':
+                    return value.toFixed(2) + '%';
+                case 'housing_starts':
+                    return value.toFixed(1) + 'K';
+                default:
+                    return String(value);
+            }
+        }
+    
+        // --------- Helper: compute indicator status (Safe / Warning / Critical) ----------
+        function getIndicatorStatus(id, value) {
+            if (value == null || isNaN(value)) {
+                return { label: 'Status: —', className: '' };
+            }
+            value = Number(value);
+    
+            // Simple, explainable heuristics (you can tune these)
+            switch (id) {
+                case 'yield_curve':
+                    if (value < 0) return { label: 'Status: ⚠️ Inverted (Warning)', className: 'warning' };
+                    if (value < 0.5) return { label: 'Status: ⚠️ Flattened', className: 'warning' };
+                    return { label: 'Status: ✅ Normal', className: 'safe' };
+    
+                case 'unemployment':
+                    if (value >= 6.0) return { label: 'Status: 🔴 Elevated', className: 'critical' };
+                    if (value >= 4.5) return { label: 'Status: ⚠️ Rising', className: 'warning' };
+                    return { label: 'Status: ✅ Healthy', className: 'safe' };
+    
+                case 'initial_claims':
+                    if (value >= 300000) return { label: 'Status: 🔴 High claims', className: 'critical' };
+                    if (value >= 250000) return { label: 'Status: ⚠️ Elevated claims', className: 'warning' };
+                    return { label: 'Status: ✅ Normal range', className: 'safe' };
+    
+                case 'gdp_growth':
+                    if (value < 0) return { label: 'Status: 🔴 Contraction', className: 'critical' };
+                    if (value < 2.0) return { label: 'Status: ⚠️ Slowing growth', className: 'warning' };
+                    return { label: 'Status: ✅ Solid growth', className: 'safe' };
+    
+                case 'industrial_production':
+                    // Harder without YoY change; treat any value as neutral for now
+                    return { label: 'Status: ℹ️ Monitor trend', className: '' };
+    
+                case 'consumer_sentiment':
+                    if (value < 60) return { label: 'Status: 🔴 Very weak sentiment', className: 'critical' };
+                    if (value < 80) return { label: 'Status: ⚠️ Below average', className: 'warning' };
+                    return { label: 'Status: ✅ Normal/strong', className: 'safe' };
+    
+                case 'bbb_credit_spread':
+                    if (value >= 3.5) return { label: 'Status: 🔴 High stress', className: 'critical' };
+                    if (value >= 2.5) return { label: 'Status: ⚠️ Elevated stress', className: 'warning' };
+                    return { label: 'Status: ✅ Stable credit', className: 'safe' };
+    
+                case 'housing_starts':
+                    // Without trend, just show neutral label
+                    return { label: 'Status: ℹ️ Monitor trend', className: '' };
+    
+                default:
+                    return { label: 'Status: —', className: '' };
+            }
+        }
+    
+        // --------- Update header (risk meter + last updated) ----------
+        function updateHeader(riskValue, riskDate, generatedAt) {
+            const riskLabelEl = document.getElementById('riskLabel');
+            const riskValueEl = document.getElementById('riskValue');
+            const riskDescriptionEl = document.getElementById('riskDescription');
+            const lastUpdatedEl = document.getElementById('lastUpdated');
+    
+            if (riskValueEl && riskValue != null && !isNaN(riskValue)) {
+                riskValueEl.textContent = Number(riskValue).toFixed(1) + '%';
+            }
+    
+            const tier = getRiskTier(riskValue);
+            if (riskLabelEl) riskLabelEl.textContent = tier.label;
+            if (riskDescriptionEl) riskDescriptionEl.textContent = tier.description;
+    
+            let displayText = 'Last Updated: ';
+    
+            if (generatedAt) {
+                const d = new Date(generatedAt);
+                if (!isNaN(d)) {
+                    const dateStr = d.toLocaleString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                    });
+                    displayText += dateStr + ' ET (latest model run)';
+                } else {
+                    displayText += generatedAt;
+                }
+            } else if (riskDate) {
+                const d = new Date(riskDate);
+                const dateStr = isNaN(d)
+                    ? riskDate
+                    : d.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                displayText += dateStr + ' (latest available data)';
+            } else {
+                displayText += 'N/A';
+            }
+    
+            if (lastUpdatedEl) lastUpdatedEl.textContent = displayText;
+        }
+    
+        // --------- Update indicator tiles ----------
+        function updateIndicatorCards(indicators) {
+            if (!Array.isArray(indicators)) return;
+            const map = new Map(indicators.map(i => [i.id, i]));
+    
+            document.querySelectorAll('.indicator-card[data-indicator-id]').forEach(card => {
+                const id = card.dataset.indicatorId;
+                const data = map.get(id);
+                if (!data) return;
+    
+                // Value
+                const valueEl = card.querySelector('.indicator-value');
+                if (valueEl) {
+                    valueEl.textContent = formatIndicatorValue(id, data.value);
+                }
+    
+                // Meta line: frequency + last updated
+                const metaEl = card.querySelector('.js-indicator-meta');
+                if (metaEl) {
+                    const freq = data.frequency || 'Unknown frequency';
+                    const last = data.last_updated || 'N/A';
+                    metaEl.textContent = `${freq} • Last Updated: ${last}`;
+                }
+    
+                // Status line (first div inside .indicator-details)
+                const statusInfo = getIndicatorStatus(id, data.value);
+                const statusContainer = card.querySelector('.indicator-details div');
+                if (statusContainer) {
+                    statusContainer.textContent = statusInfo.label;
+                }
+    
+                // Card border color (safe/warning/critical)
+                card.classList.remove('safe', 'warning', 'critical');
+                if (statusInfo.className) {
+                    card.classList.add(statusInfo.className);
+                }
+            });
+        }
+    
+        // --------- Create risk chart ----------
+        function createRiskChart(history) {
+            if (!history || history.length === 0) {
+                console.error('No history data for chart');
+                return;
+            }
+    
+            const ctx = document.getElementById('riskChart');
+            if (!ctx) {
+                console.error('Canvas element not found');
+                return;
+            }
+    
+            const labels = history.map(d => d.date);
+            const data = history.map(d => d.risk);
+    
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Recession Risk %',
+                        data,
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#3498db',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        // Color each segment based on risk value at the start of the segment
+                        segment: {
+                            borderColor: ctx => {
+                                const v = ctx.p0.parsed.y;
+                                if (v < 30) return '#27ae60';   // green
+                                if (v < 60) return '#f39c12';   // yellow
+                                return '#e74c3c';               // red
+                            }
+                        }
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            cornerRadius: 6,
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 13
+                            },
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Risk: ' + context.parsed.y.toFixed(1) + '%';
+                                }
+                            }
+                        },
+                        annotation: {
+                            annotations: {
+                                lowRisk: {
+                                    type: 'box',
+                                    yMin: 0,
+                                    yMax: 30,
+                                    backgroundColor: 'rgba(39, 174, 96, 0.08)',
+                                    borderWidth: 0
+                                },
+                                mediumRisk: {
+                                    type: 'box',
+                                    yMin: 30,
+                                    yMax: 60,
+                                    backgroundColor: 'rgba(243, 156, 18, 0.08)',
+                                    borderWidth: 0
+                                },
+                                highRisk: {
+                                    type: 'box',
+                                    yMin: 60,
+                                    yMax: 100,
+                                    backgroundColor: 'rgba(231, 76, 60, 0.08)',
+                                    borderWidth: 0
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Date',
+                                font: {
+                                    size: 13,
+                                    weight: 'bold'
+                                }
+                            },
+                            ticks: {
+                                maxTicksLimit: 12,
+                                font: {
+                                    size: 11
+                                }
+                            },
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Recession Risk %',
+                                font: {
+                                    size: 13,
+                                    weight: 'bold'
+                                }
+                            },
+                            min: 0,
+                            max: 100,
+                            ticks: {
+                                font: {
+                                    size: 11
+                                },
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+        }
+    
+        // --------- Main loader: fetch JSON + wire everything ----------
+        async function loadDashboardData() {
+            try {
+                console.log('Fetching risk_history.json and current_indicators.json...');
+                const [historyRes, indicatorsRes] = await Promise.all([
+                    fetch('risk_history.json'),
+                    fetch('current_indicators.json')
+                ]);
+    
+                if (!historyRes.ok) throw new Error('Failed to load risk_history.json');
+                if (!indicatorsRes.ok) throw new Error('Failed to load current_indicators.json');
+    
+                const history = await historyRes.json();
+                const indicatorsData = await indicatorsRes.json();
+    
+                const riskValue =
+                    indicatorsData?.risk?.value ??
+                    (history.length ? history[history.length - 1].risk : null);
+    
+                const riskDate =
+                    indicatorsData?.risk?.date ??
+                    (history.length ? history[history.length - 1].date : null);
+    
+                const generatedAt = indicatorsData?.generated_at ?? null;
+    
+                updateHeader(riskValue, riskDate, generatedAt);
+                updateIndicatorCards(indicatorsData.indicators || []);
+                createRiskChart(history);
+    
+                console.log('✅ Dashboard data loaded successfully');
+            } catch (error) {
+                console.error('❌ Error loading dashboard data:', error);
+            }
+        }
+    
+        window.addEventListener('load', loadDashboardData);
     </script>
+
 </body>
 </html>
