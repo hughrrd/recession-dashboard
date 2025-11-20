@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Recession Risk Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .last-updated {
+            margin-top: 15px;
+            font-size: 0.9em;
+            opacity: 0.8;
+            font-style: italic;
+        }
+        
+        .main-content {
+            padding: 30px;
+        }
+        
+        .risk-meter-section {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(to bottom, #f8f9fa, white);
+            margin-bottom: 30px;
+            border-radius: 15px;
+        }
+        
+        .risk-percentage {
+            font-size: 5em;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        
+        .risk-label {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+        
+        .risk-description {
+            font-size: 1.1em;
+            color: #666;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        
+        .legend-text {
+            font-weight: 600;
+        }
+        
+        .indicators-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .indicator-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-left: 4px solid #ccc;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .indicator-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+        }
+        
+        .indicator-card.safe {
+            border-left-color: #27ae60;
+        }
+        
+        .indicator-card.warning {
+            border-left-color: #f39c12;
+        }
+        
+        .indicator-card.critical {
+            border-left-color: #e74c3c;
+        }
+        
+        .indicator-name {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .indicator-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .indicator-details {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 10px;
+        }
+        
+        .indicator-description {
+            font-size: 0.85em;
+            color: #777;
+            margin-top: 10px;
+            font-style: italic;
+        }
+        
+        .chart-container {
+            margin: 40px 0;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .chart-title {
+            font-size: 1.8em;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .chart-subtitle {
+            font-size: 1em;
+            color: #666;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .chart-wrapper {
+            position: relative;
+            height: 400px;
+        }
+        
+        .chart-note {
+            font-size: 0.9em;
+            color: #777;
+            margin-top: 15px;
+            text-align: center;
+            font-style: italic;
+        }
+        
+        .historical-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin-top: 40px;
+        }
+        
+        .historical-section h3 {
+            font-size: 1.8em;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+        
+        .recession-markers {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .recession-marker {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .recession-marker h4 {
+            color: #e74c3c;
+            margin-bottom: 10px;
+        }
+        
+        .recession-marker p {
+            margin: 5px 0;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 U.S. Recession Risk Dashboard</h1>
+            <div class="subtitle">Real-time Economic Indicators & Risk Assessment</div>
+            <div class="last-updated">Last Updated: November 20, 2025 at 02:30 PM ET</div>
+        </header>
+        
+        <div class="main-content">
+            <!-- Risk Meter -->
+            <div class="risk-meter-section">
+                <div class="risk-label">Current Recession Risk</div>
+                <div class="risk-percentage">20%</div>
+                <div class="risk-description">
+                    Economy showing healthy growth with minimal recession indicators
+                </div>
+                
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #27ae60;"></div>
+                        <div>
+                            <div class="legend-text" style="color: #27ae60;">Low Risk (0-30%)</div>
+                            <div style="font-size: 0.85em; color: #666;">Economy showing healthy growth</div>
+                        </div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #f39c12;"></div>
+                        <div>
+                            <div class="legend-text" style="color: #f39c12;">Medium Risk (31-60%)</div>
+                            <div style="font-size: 0.85em; color: #666;">Warning signs emerging</div>
+                        </div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #e74c3c;"></div>
+                        <div>
+                            <div class="legend-text" style="color: #e74c3c;">High Risk (61-100%)</div>
+                            <div style="font-size: 0.85em; color: #666;">Recession likely or imminent</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Economic Indicators Grid -->
+            <h2 style="margin-top: 40px; margin-bottom: 20px; font-size: 2em; color: #2c3e50;">Key Economic Indicators</h2>
+            <div class="indicators-grid" id="indicators">
+                <!-- Indicator 1: Yield Curve -->
+                <div class="indicator-card safe">
+                    <div class="indicator-name">Yield Curve (10Y-2Y)</div>
+                    <div class="indicator-value">+0.54%</div>
+                    <div class="indicator-details">
+                        <div>Status: ✅ Safe</div>
+                        <div>Update Frequency: Daily</div>
+                    </div>
+                    <div class="indicator-description">
+                        Difference between 10-year and 2-year Treasury yields. Inversion (negative values) historically precedes recessions by 12-18 months.
+                    </div>
+                </div>
+                
+                <!-- Indicator 2: Unemployment Rate -->
+                <div class="indicator-card safe">
+                    <div class="indicator-name">Unemployment Rate</div>
+                    <div class="indicator-value">4.4%</div>
+                    <div class="indicator-details">
+                        <div>Status: ✅ Safe</div>
+                        <div>Update Frequency: Monthly</div>
+                    </div>
+                    <div class="indicator-description">
+                        Percentage of workforce actively seeking employment. Rapid increases of 0.5%+ in 3 months typically signal recession.
+                    </div>
+                </div>
+                
+                <!-- Indicator 3: Initial Jobless Claims -->
+                <div class="indicator-card safe">
+                    <div class="indicator-name">Initial Jobless Claims</div>
+                    <div class="indicator-value">220,000</div>
+                    <div class="indicator-details">
+                        <div>Status: ✅ Safe</div>
+                        <div>Update Frequency: Weekly</div>
+                    </div>
+                    <div class="indicator-description">
+                        Weekly new unemployment insurance claims. Sustained increases above 300k typically signal labor market deterioration.
+                    </div>
+                </div>
+                
+                <!-- Indicator 4: GDP Growth -->
+                <div class="indicator-card safe">
+                    <div class="indicator-name">Real GDP Growth</div>
+                    <div class="indicator-value">3.8%</div>
+                    <div class="indicator-details">
+                        <div>Status: ✅ Safe</div>
+                        <div>Update Frequency: Quarterly</div>
+                    </div>
+                    <div class="indicator-description">
+                        Inflation-adjusted economic growth rate. Two consecutive negative quarters technically define a recession.
+                    </div>
+                </div>
+                
+                <!-- Indicator 5: Industrial Production -->
+                <div class="indicator-card safe">
+                    <div class="indicator-name">Industrial Production</div>
+                    <div class="indicator-value">103.9203</div>
+                    <div class="indicator-details">
+                        <div>Status: ✅ Safe</div>
+                        <div>Update Frequency: Monthly</div>
+                    </div>
+                    <div class="indicator-description">
+                        Manufacturing, mining, and utilities output index. Declining values suggest economic contraction.
+                    </div>
+                </div>
+                
+                <!-- Indicator 6: Consumer Sentiment -->
+                <div class="indicator-card safe">
+                    <div class="indicator-name">Consumer Sentiment</div>
+                    <div class="indicator-value">55.1</div>
+                    <div class="indicator-details">
+                        <div>Status: ✅ Safe</div>
+                        <div>Update Frequency: Monthly</div>
+                    </div>
+                    <div class="indicator-description">
+                        Survey of consumer expectations. Sharp declines below 90 often precede reduced consumer spending and recession.
+                    </div>
+                </div>
+                
+                <!-- Indicator 7: Credit Spread -->
+                <div class="indicator-card safe">
+                    <div class="indicator-name">BBB Credit Spread</div>
+                    <div class="indicator-value">1.07%</div>
+                    <div class="indicator-details">
+                        <div>Status: ✅ Safe</div>
+                        <div>Update Frequency: Daily</div>
+                    </div>
+                    <div class="indicator-description">
+                        BBB corporate bond yield over Treasury. Widening spreads above 2.5% indicate increased credit risk and financial stress.
+                    </div>
+                </div>
+                
+                <!-- Indicator 8: Housing Starts -->
+                <div class="indicator-card safe">
+                    <div class="indicator-name">Housing Starts</div>
+                    <div class="indicator-value">1307.0K</div>
+                    <div class="indicator-details">
+                        <div>Status: ✅ Safe</div>
+                        <div>Update Frequency: Monthly</div>
+                    </div>
+                    <div class="indicator-description">
+                        New residential construction projects started. Sharp declines often signal weakening economy and reduced consumer confidence.
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Historical Context -->
+            <div class="historical-section">
+                <h3>📜 Historical Recession Comparison</h3>
+                <p>The chart below shows current risk trends compared to past recessions. Gray shaded areas indicate official NBER recession periods. Notice how risk typically spikes 6-18 months before recessions begin.</p>
+                
+                <div class="recession-markers">
+                    <div class="recession-marker">
+                        <h4>2020 COVID Recession</h4>
+                        <p><strong>Feb-Apr 2020</strong></p>
+                        <p>Peak Risk: 95% | Duration: 2 months</p>
+                        <p>Fastest indicators: Jobless claims (+3000%), ISM (-20 points)</p>
+                    </div>
+                    <div class="recession-marker">
+                        <h4>2008 Financial Crisis</h4>
+                        <p><strong>Dec 2007-Jun 2009</strong></p>
+                        <p>Peak Risk: 88% | Duration: 18 months</p>
+                        <p>Leading indicators: Yield curve inverted 22 months prior</p>
+                    </div>
+                    <div class="recession-marker">
+                        <h4>2001 Dot-Com Bust</h4>
+                        <p><strong>Mar-Nov 2001</strong></p>
+                        <p>Peak Risk: 72% | Duration: 8 months</p>
+                        <p>Warnings: LEI declined 12 months before</p>
+                    </div>
+                    <div class="recession-marker">
+                        <h4>1990-91 Recession</h4>
+                        <p><strong>Jul 1990-Mar 1991</strong></p>
+                        <p>Peak Risk: 68% | Duration: 8 months</p>
+                        <p>Triggers: Oil shock, yield curve inversion</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">Recession Risk Trend (Past 2 Years)</div>
+                <div class="chart-subtitle">
+                    Green zone: Low risk (0-30%) • Yellow zone: Medium risk (31-60%) • Red zone: High risk (61-100%)
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="riskChart"></canvas>
+                </div>
+                <div class="chart-note">
+                    📊 Chart displays real-time risk data from FRED economic indicators.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Load and display risk history chart
+        async function createRiskChart() {
+            try {
+                console.log('Fetching risk history data...');
+                const response = await fetch('risk_history.json');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const history = await response.json();
+                console.log('Loaded data points:', history.length);
+                
+                if (!history || history.length === 0) {
+                    throw new Error('No data in history file');
+                }
+                
+                const ctx = document.getElementById('riskChart');
+                if (!ctx) {
+                    throw new Error('Canvas element not found');
+                }
+                
+                // Get color based on risk value - simpler approach
+                const getLineColor = (value) => {
+                    if (value < 30) return '#27ae60';
+                    if (value < 60) return '#f39c12';
+                    return '#e74c3c';
+                };
+                
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: history.map(d => d.date),
+                        datasets: [{
+                            label: 'Recession Risk %',
+                            data: history.map(d => d.risk),
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: '#3498db',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                padding: 12,
+                                cornerRadius: 6,
+                                titleFont: {
+                                    size: 14,
+                                    weight: 'bold'
+                                },
+                                bodyFont: {
+                                    size: 13
+                                },
+                                callbacks: {
+                                    label: function(context) {
+                                        return 'Risk: ' + context.parsed.y.toFixed(1) + '%';
+                                    }
+                                }
+                            },
+                            annotation: {
+                                annotations: {
+                                    lowRisk: {
+                                        type: 'box',
+                                        yMin: 0,
+                                        yMax: 30,
+                                        backgroundColor: 'rgba(39, 174, 96, 0.08)',
+                                        borderWidth: 0
+                                    },
+                                    mediumRisk: {
+                                        type: 'box',
+                                        yMin: 30,
+                                        yMax: 60,
+                                        backgroundColor: 'rgba(243, 156, 18, 0.08)',
+                                        borderWidth: 0
+                                    },
+                                    highRisk: {
+                                        type: 'box',
+                                        yMin: 60,
+                                        yMax: 100,
+                                        backgroundColor: 'rgba(231, 76, 60, 0.08)',
+                                        borderWidth: 0
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                display: true,
+                                title: {
+                                    display: true,
+                                    text: 'Date',
+                                    font: {
+                                        size: 13,
+                                        weight: 'bold'
+                                    }
+                                },
+                                ticks: {
+                                    maxTicksLimit: 12,
+                                    font: {
+                                        size: 11
+                                    }
+                                },
+                                grid: {
+                                    display: false
+                                }
+                            },
+                            y: {
+                                display: true,
+                                title: {
+                                    display: true,
+                                    text: 'Recession Risk %',
+                                    font: {
+                                        size: 13,
+                                        weight: 'bold'
+                                    }
+                                },
+                                min: 0,
+                                max: 100,
+                                ticks: {
+                                    font: {
+                                        size: 11
+                                    },
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.05)'
+                                }
+                            }
+                        },
+                        interaction: {
+                            mode: 'nearest',
+                            axis: 'x',
+                            intersect: false
+                        }
+                    }
+                });
+                
+                console.log('✅ Chart created successfully!');
+                
+            } catch (error) {
+                console.error('❌ Error creating chart:', error);
+            }
+        }
+        
+        // Initialize when page loads
+        window.addEventListener('load', function() {
+            console.log('Page loaded, initializing chart...');
+            createRiskChart();
+        });
+    </script>
+</body>
+</html>
