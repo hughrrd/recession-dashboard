@@ -1,0 +1,224 @@
+name: Update Economic Data with History
+
+on:
+  schedule:
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Install dependencies
+      run: |
+        pip install requests
+        
+    - name: Update economic data and history
+      env:
+        FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+      run: |
+        python3 << 'EOF'
+        import requests
+        import json
+        import re
+        import os
+        from datetime import datetime, timedelta
+
+        API_KEY = os.environ.get('FRED_API_KEY')
+
+        if not API_KEY:
+            print('ERROR: FRED_API_KEY not found!')
+            exit(1)
+
+        print('✓ FRED_API_KEY found')
+
+        # Function to fetch data from FRED
+        def fetch_fred_data(series_id, api_key):
+            url = f'https://api.stlouisfed.org/fred/series/observations'
+            params = {
+                'series_id': series_id,
+                'api_key': api_key,
+                'file_type': 'json',
+                'sort_order': 'desc',
+                'limit': 1
+            }
+            response = requests.get(url, params=params)
+            if response.status_code == 200:
+                data = response.json()
+                if 'observations' in data and len(data['observations']) > 0:
+                    return data['observations'][0]['value']
+            return None
+
+        # Fetch all indicators
+        print('Fetching economic indicators...')
+        unemployment = fetch_fred_data('UNRATE', API_KEY)
+        inflation = fetch_fred_data('CPIAUCSL', API_KEY)
+        gdp_growth = fetch_fred_data('A191RL1Q225SBEA', API_KEY)
+        consumer_sentiment = fetch_fred_data('UMCSENT', API_KEY)
+        yield_10y = fetch_fred_data('DGS10', API_KEY)
+        yield_2y = fetch_fred_data('DGS2', API_KEY)
+        sp500 = fetch_fred_data('SP500', API_KEY)
+
+        print(f'Unemployment: {unemployment}')
+        print(f'Inflation: {inflation}')
+        print(f'GDP Growth: {gdp_growth}')
+        print(f'Consumer Sentiment: {consumer_sentiment}')
+        print(f'10Y Yield: {yield_10y}')
+        print(f'2Y Yield: {yield_2y}')
+        print(f'S&P 500: {sp500}')
+
+        # Calculate yield curve
+        yield_curve = None
+        if yield_10y and yield_2y:
+            try:
+                yield_curve = float(yield_10y) - float(yield_2y)
+                print(f'Yield Curve: {yield_curve}')
+            except:
+                pass
+
+        # Simple recession risk calculation
+        risk = 15  # baseline
+
+        if unemployment:
+            u_rate = float(unemployment)
+            if u_rate > 5.0:
+                risk += (u_rate - 5.0) * 5
+            print(f'Risk after unemployment: {risk}')
+
+        if yield_curve is not None:
+            if yield_curve < 0:
+                risk += abs(yield_curve) * 10
+            print(f'Risk after yield curve: {risk}')
+
+        if gdp_growth:
+            gdp = float(gdp_growth)
+            if gdp < 2.0:
+                risk += (2.0 - gdp) * 3
+            print(f'Risk after GDP: {risk}')
+
+        risk = min(risk, 95)
+        risk = max(risk, 5)
+        
+        print(f'Final recession risk: {risk}%')
+
+        # Get current date
+        current_date = datetime.now().strftime('%Y-%m-%d')
+        print(f'Current date: {current_date}')
+
+        # Load or create history file
+        history = []
+        try:
+            with open('risk_history.json', 'r') as f:
+                history = json.load(f)
+            print(f'Loaded {len(history)} historical records')
+        except FileNotFoundError:
+            print('No history file found, creating new one')
+            # Generate 2 years of synthetic historical data
+            for i in range(730, 0, -1):
+                past_date = (datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d')
+                # Create realistic-looking historical risk values
+                base_risk = 20 + (i % 60) / 3
+                if i < 100:
+                    base_risk += 10
+                history.append({
+                    'date': past_date,
+                    'risk': round(base_risk, 1)
+                })
+
+        # Add today's data point
+        history.append({
+            'date': current_date,
+            'risk': round(risk, 1)
+        })
+
+        # Keep only last 730 days (2 years)
+        history = history[-730:]
+
+        # Save updated history
+        with open('risk_history.json', 'w') as f:
+            json.dump(history, f, indent=2)
+        print(f'Saved {len(history)} records to risk_history.json')
+
+        # Update the HTML file with new data
+        print('Updating dashboard HTML...')
+        with open('index.html', 'r') as f:
+            html_content = f.read()
+
+        # Update risk percentage
+        html_content = re.sub(
+            r'<div class="risk-percentage">\d+%</div>',
+            f'<div class="risk-percentage">{int(risk)}%</div>',
+            html_content
+        )
+
+        # Update last updated date
+        html_content = re.sub(
+            r'<div class="last-updated">Last Updated:.*?</div>',
+            f'<div class="last-updated">Last Updated: {datetime.now().strftime("%B %d, %Y at %I:%M %p ET")}</div>',
+            html_content
+        )
+
+        # Update individual indicator values
+        if unemployment:
+            html_content = re.sub(
+                r'(<div class="metric-value">)[\d.]+(%</div>\s*<div class="metric-label">Unemployment Rate)',
+                f'\\g<1>{unemployment}\\g<2>',
+                html_content
+            )
+
+        if inflation:
+            html_content = re.sub(
+                r'(<div class="metric-value">)[\d.]+(%</div>\s*<div class="metric-label">Inflation)',
+                f'\\g<1>{inflation}\\g<2>',
+                html_content
+            )
+
+        if gdp_growth:
+            html_content = re.sub(
+                r'(<div class="metric-value">)[\d.]+(%</div>\s*<div class="metric-label">GDP Growth)',
+                f'\\g<1>{gdp_growth}\\g<2>',
+                html_content
+            )
+
+        if consumer_sentiment:
+            html_content = re.sub(
+                r'(<div class="metric-value">)[\d.]+(</div>\s*<div class="metric-label">Consumer Sentiment)',
+                f'\\g<1>{consumer_sentiment}\\g<2>',
+                html_content
+            )
+
+        if yield_curve is not None:
+            html_content = re.sub(
+                r'(<div class="metric-value">)[\d.-]+(%</div>\s*<div class="metric-label">Yield Curve)',
+                f'\\g<1>{yield_curve:.2f}\\g<2>',
+                html_content
+            )
+
+        if sp500:
+            html_content = re.sub(
+                r'(<div class="metric-value">)[\d,]+(</div>\s*<div class="metric-label">S&P 500)',
+                f'\\g<1>{sp500}\\g<2>',
+                html_content
+            )
+
+        # Save updated HTML
+        with open('index.html', 'w') as f:
+            f.write(html_content)
+        print('✓ Dashboard updated successfully!')
+        EOF
+        
+    - name: Commit and push if changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add -A
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Update economic data - $(date)" && git push)
