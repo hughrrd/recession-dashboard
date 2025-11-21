@@ -1,4 +1,4 @@
-name: Update Economic Data with History (EMA Smoothed)
+name: Update Economic Data with History
 
 on:
   schedule:
@@ -11,208 +11,28 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
       - name: Install dependencies
-        run: pip install requests
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
 
       - name: Update economic data and history
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: |
-          python3 << 'EOF'
-import requests
-import json
-import os
-from datetime import datetime
+          python backfill_real_history.py
 
-API_KEY = os.environ.get("FRED_API_KEY")
-if not API_KEY:
-    print("❌ ERROR: Missing FRED_API_KEY")
-    exit(1)
-
-print("✓ API key loaded")
-
-def fetch(series):
-    url = "https://api.stlouisfed.org/fred/series/observations"
-    p = {
-        "series_id": series,
-        "api_key": API_KEY,
-        "file_type": "json",
-        "limit": 10,
-        "sort_order": "desc"
-    }
-    r = requests.get(url, params=p, timeout=10)
-    if r.status_code != 200:
-        print(f"⚠ Error fetching {series}: HTTP {r.status_code}")
-        return None, None
-    for obs in r.json().get("observations", []):
-        if obs["value"] != ".":
-            return obs["value"], obs["date"]
-    return None, None
-
-# ---------------- Fetch indicators -----------------
-print("Fetching data...")
-d10, d10d = fetch("DGS10")
-d2, d2d   = fetch("DGS2")
-un, und   = fetch("UNRATE")
-cl, cld   = fetch("ICSA")
-gdp, gdpd = fetch("A191RL1Q225SBEA")
-ip, ipd   = fetch("INDPRO")
-cs, csd   = fetch("UMCSENT")
-bbb, bbbd = fetch("BAMLC0A4CBBB")
-hs, hsd   = fetch("HOUST")
-
-# ---------------- Compute yield curve -----------------
-yc = None
-if d10 and d2:
-    yc = float(d10) - float(d2)
-
-# ---------------- Compute risk -----------------
-risk = 15
-if yc is not None:
-    if yc < -0.5:
-        risk += 25
-    elif yc < 0:
-        risk += abs(yc) * 30
-    elif yc > 0.5:
-        risk -= 5
-
-if un:
-    u = float(un)
-    if u > 5:
-        risk += (u - 5) * 8
-    elif u < 4:
-        risk -= 3
-
-if cl:
-    c = float(cl)
-    if c > 300000:
-        risk += (c - 300000) / 10000
-
-if gdp:
-    g = float(gdp)
-    if g < 0:
-        risk += 15
-    elif g < 2:
-        risk += (2 - g) * 5
-
-if cs:
-    v = float(cs)
-    if v < 70:
-        risk += 10
-    elif v < 90:
-        risk += (90 - v) / 4
-
-if bbb:
-    s = float(bbb)
-    if s > 2.5:
-        risk += (s - 2.5) * 8
-
-risk = round(max(5, min(95, risk)), 1)
-print("Raw risk:", risk)
-
-# -------------- Load and smooth history -----------------
-try:
-    with open("risk_history.json") as f:
-        hist = json.load(f)
-except:
-    hist = []
-
-def ema(values, alpha=0.2):
-    if not values:
-        return values
-    out = [values[0]]
-    for v in values[1:]:
-        out.append(alpha*v + (1-alpha)*out[-1])
-    return out
-
-today = datetime.now().strftime("%Y-%m-%d")
-hist.append({"date": today, "risk": risk})
-
-hist = hist[-730:]
-raw = [h["risk"] for h in hist]
-smooth = ema(raw)
-
-for i, v in enumerate(smooth):
-    hist[i]["risk"] = round(v, 1)
-
-with open("risk_history.json", "w") as f:
-    json.dump(hist, f, indent=2)
-
-print("✓ risk_history.json updated")
-
-# -------------- Write current_indicators.json -----------------
-current = {
-    "generated_at": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
-    "risk": {"value": risk, "date": today},
-    "indicators": [
-        {"id":"yield_curve","name":"Yield Curve (10Y-2Y)",
-         "frequency":"Daily","value":round(yc,2) if yc else None,
-         "last_updated":min(d10d,d2d) if d10d and d2d else None},
-
-        {"id":"unemployment","name":"Unemployment Rate",
-         "frequency":"Monthly","value":float(un) if un else None,
-         "last_updated":und},
-
-        {"id":"initial_claims","name":"Initial Jobless Claims",
-         "frequency":"Weekly","value":float(cl) if cl else None,
-         "last_updated":cld},
-
-        {"id":"gdp_growth","name":"Real GDP Growth",
-         "frequency":"Quarterly","value":float(gdp) if gdp else None,
-         "last_updated":gdpd},
-
-        {"id":"industrial_production","name":"Industrial Production",
-         "frequency":"Monthly","value":float(ip) if ip else None,
-         "last_updated":ipd},
-
-        {"id":"consumer_sentiment","name":"Consumer Sentiment",
-         "frequency":"Monthly","value":float(cs) if cs else None,
-         "last_updated":csd},
-
-        {"id":"bbb_credit_spread","name":"BBB Credit Spread",
-         "frequency":"Daily","value":float(bbb) if bbb else None,
-         "last_updated":bbbd},
-
-        {"id":"housing_starts","name":"Housing Starts",
-         "frequency":"Monthly","value":float(hs) if hs else None,
-         "last_updated":hsd},
-    ]
-}
-
-with open("current_indicators.json","w") as f:
-    json.dump(current, f, indent=2)
-
-print("✓ current_indicators.json updated")
-
-# -------------- Optional HTML risk placeholder update --------------
-try:
-    with open("index.html") as f:
-        html = f.read()
-
-    if 'id="riskValue">—' in html:
-        html = html.replace('id="riskValue">—', f'id="riskValue">{risk}')
-        with open("index.html","w") as f:
-            f.write(html)
-        print("✓ Updated index.html")
-    else:
-        print("ℹ index.html already updated or JS handles value")
-except:
-    print("ℹ Skipped HTML update.")
-
-print("🎉 DONE")
-EOF
-
-      - name: Commit and push if changed
+      - name: Commit and push if changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add -A
-          git diff --quiet && git diff --staged --quiet || \
-            (git commit -m "Automated update" && git push)
+          git diff --cached --quiet || git commit -m "Automated data update - $(date)"
+          git push
