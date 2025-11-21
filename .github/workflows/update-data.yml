@@ -1,370 +1,242 @@
-name: Update Economic Data with History
+name: Update Economic Data with History (EMA Smoothed)
 
 on:
   schedule:
-    - cron: '0 9 * * *'
+    - cron: "0 9 * * *"
   workflow_dispatch:
 
 jobs:
   update-data:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
-      
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
-        
+
     - name: Install dependencies
       run: |
         pip install requests
-        
-    - name: Update economic data and history
+
+    - name: Update economic data, compute risk, and smooth history
       env:
         FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
       run: |
-        python3 << 'EOF'
-        import requests
-        import json
-        import re
-        import os
-        from datetime import datetime, timedelta
+        import requests, json, os
+        from datetime import datetime
 
-        API_KEY = os.environ.get('FRED_API_KEY')
-
+        API_KEY = os.environ.get("FRED_API_KEY")
         if not API_KEY:
-            print('ERROR: FRED_API_KEY not found!')
+            print("ERROR: Missing FRED_API_KEY secret")
             exit(1)
 
-        print('✓ FRED_API_KEY found')
-
-        # Function to fetch data from FRED
-        def fetch_fred_data(series_id, api_key):
-            url = 'https://api.stlouisfed.org/fred/series/observations'
+        # ---------------------------
+        # Helper: Fetch latest FRED value
+        # ---------------------------
+        def fetch_latest(series_id):
+            url = "https://api.stlouisfed.org/fred/series/observations"
             params = {
-                'series_id': series_id,
-                'api_key': api_key,
-                'file_type': 'json',
-                'sort_order': 'desc',
-                'limit': 10
+                "series_id": series_id,
+                "api_key": API_KEY,
+                "file_type": "json",
+                "sort_order": "desc",
+                "limit": 10
             }
             try:
-                response = requests.get(url, params=params, timeout=10)
-                if response.status_code == 200:
-                    data = response.json()
-                    if 'observations' in data and len(data['observations']) > 0:
-                        # Find first non-null value
-                        for obs in data['observations']:
-                            if obs['value'] != '.':
-                                return obs['value'], obs['date']
-                print(f'Warning: No valid data for {series_id}')
-                return None, None
+                r = requests.get(url, params=params, timeout=10)
+                data = r.json()
+                for obs in data["observations"]:
+                    if obs["value"] != ".":
+                        return float(obs["value"]), obs["date"]
             except Exception as e:
-                print(f'Error fetching {series_id}: {e}')
-                return None, None
+                print(f"Error fetching {series_id}: {e}")
+            return None, None
 
-        # Fetch all 8 indicators
-        print('Fetching economic indicators...')
-        
-        yield_10y, date_10y = fetch_fred_data('DGS10', API_KEY)
-        yield_2y, date_2y = fetch_fred_data('DGS2', API_KEY)
-        unemployment, date_unemp = fetch_fred_data('UNRATE', API_KEY)
-        initial_claims, date_claims = fetch_fred_data('ICSA', API_KEY)
-        gdp_growth, date_gdp = fetch_fred_data('A191RL1Q225SBEA', API_KEY)
-        industrial_prod, date_ind = fetch_fred_data('INDPRO', API_KEY)
-        consumer_sentiment, date_cons = fetch_fred_data('UMCSENT', API_KEY)
-        credit_spread, date_credit = fetch_fred_data('BAMLC0A4CBBB', API_KEY)
-        housing_starts, date_housing = fetch_fred_data('HOUST', API_KEY)
+        print("Fetching FRED data...")
 
-        print(f'10Y Yield: {yield_10y} (as of {date_10y})')
-        print(f'2Y Yield: {yield_2y} (as of {date_2y})')
-        print(f'Unemployment: {unemployment}% (as of {date_unemp})')
-        print(f'Initial Claims: {initial_claims} (as of {date_claims})')
-        print(f'GDP Growth: {gdp_growth}% (as of {date_gdp})')
-        print(f'Industrial Production: {industrial_prod} (as of {date_ind})')
-        print(f'Consumer Sentiment: {consumer_sentiment} (as of {date_cons})')
-        print(f'Credit Spread: {credit_spread}% (as of {date_credit})')
-        print(f'Housing Starts: {housing_starts}K (as of {date_housing})')
+        d10, d10_date = fetch_latest("DGS10")
+        d02, d02_date = fetch_latest("DGS2")
+        unrate, unrate_date = fetch_latest("UNRATE")
+        claims, claims_date = fetch_latest("ICSA")
+        gdp, gdp_date = fetch_latest("A191RL1Q225SBEA")
+        indpro, indpro_date = fetch_latest("INDPRO")
+        sentiment, sentiment_date = fetch_latest("UMCSENT")
+        credit, credit_date = fetch_latest("BAMLC0A4CBBB")
+        housing, housing_date = fetch_latest("HOUST")
 
-        # ---- Calculate yield curve & risk ----
-        yield_curve = None
-        if yield_10y and yield_2y:
-            try:
-                yield_curve = float(yield_10y) - float(yield_2y)
-                print(f'Yield Curve: {yield_curve:.2f}%')
-            except Exception as e:
-                print(f'Error computing yield curve: {e}')
+        # ---------------------------
+        # Compute Risk Score
+        # ---------------------------
+        risk = 15   # baseline
 
-        # Simple recession risk calculation
-        risk = 15  # baseline
-
-        # Yield curve impact (25% weight)
-        if yield_curve is not None:
-            if yield_curve < -0.5:
+        # Yield curve
+        if d10 is not None and d02 is not None:
+            yc = d10 - d02
+            if yc < -0.5:
                 risk += 25
-            elif yield_curve < 0:
-                risk += abs(yield_curve) * 30
-            elif yield_curve > 0.5:
+            elif yc < 0:
+                risk += abs(yc) * 30
+            elif yc > 0.5:
                 risk -= 5
-            print(f'Risk after yield curve: {risk}')
+        else:
+            yc = None
 
-        # Unemployment impact (20% weight)
-        if unemployment:
-            try:
-                u_rate = float(unemployment)
-                if u_rate > 5.0:
-                    risk += (u_rate - 5.0) * 8
-                elif u_rate < 4.0:
-                    risk -= 3
-                print(f'Risk after unemployment: {risk}')
-            except Exception as e:
-                print(f'Error handling unemployment: {e}')
+        # Unemployment
+        if unrate is not None:
+            if unrate > 5.0:
+                risk += (unrate - 5.0) * 8
+            elif unrate < 4.0:
+                risk -= 3
 
-        # Initial claims impact (10% weight)
-        if initial_claims:
-            try:
-                claims = float(initial_claims)
-                if claims > 300000:
-                    risk += (claims - 300000) / 10000
-                print(f'Risk after claims: {risk}')
-            except Exception as e:
-                print(f'Error handling initial claims: {e}')
+        # Initial Claims
+        if claims is not None and claims > 300000:
+            risk += (claims - 300000) / 10000
 
-        # GDP impact (15% weight)
-        if gdp_growth:
-            try:
-                gdp = float(gdp_growth)
-                if gdp < 0:
-                    risk += 15
-                elif gdp < 2.0:
-                    risk += (2.0 - gdp) * 5
-                print(f'Risk after GDP: {risk}')
-            except Exception as e:
-                print(f'Error handling GDP: {e}')
+        # GDP
+        if gdp is not None:
+            if gdp < 0:
+                risk += 15
+            elif gdp < 2.0:
+                risk += (2.0 - gdp) * 5
 
-        # Consumer sentiment impact (10% weight)
-        if consumer_sentiment:
-            try:
-                cs = float(consumer_sentiment)
-                if cs < 70:
-                    risk += 10
-                elif cs < 90:
-                    risk += (90 - cs) / 4
-                print(f'Risk after consumer sentiment: {risk}')
-            except Exception as e:
-                print(f'Error handling consumer sentiment: {e}')
+        # Sentiment
+        if sentiment is not None:
+            if sentiment < 70:
+                risk += 10
+            elif sentiment < 90:
+                risk += (90 - sentiment) / 4
 
-        # Credit spread impact (10% weight)
-        if credit_spread:
-            try:
-                spread = float(credit_spread)
-                if spread > 2.5:
-                    risk += (spread - 2.5) * 8
-                print(f'Risk after credit spread: {risk}')
-            except Exception as e:
-                print(f'Error handling credit spread: {e}')
+        # Credit Spread
+        if credit is not None and credit > 2.5:
+            risk += (credit - 2.5) * 8
 
-        risk = min(risk, 95)
-        risk = max(risk, 5)
-        risk = round(risk, 1)
-        
-        print(f'Final recession risk: {risk}%')
+        # Bound risk
+        risk = max(5, min(95, round(risk, 1)))
 
-        # ---- Build current_indicators.json (now that risk is known) ----
-        current_indicators = {
-            "generated_at": datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
+        print("Raw daily risk:", risk)
+
+        # ---------------------------
+        # Load existing history
+        # ---------------------------
+        try:
+            with open("risk_history.json", "r") as f:
+                history = json.load(f)
+        except:
+            history = []
+
+        # New point for today
+        today = datetime.utcnow().strftime("%Y-%m-%d")
+        new_point = {"date": today, "risk": risk}
+
+        # Replace if today's entry exists
+        if history and history[-1]["date"] == today:
+            history[-1] = new_point
+        else:
+            history.append(new_point)
+
+        # Keep only last 2 years (~730 days)
+        history = history[-730:]
+
+        # ---------------------------
+        # Apply EMA smoothing (α = 0.3)
+        # ---------------------------
+        alpha = 0.3
+        smoothed = []
+        ema_prev = history[0]["risk"]
+
+        for entry in history:
+            ema_today = alpha * entry["risk"] + (1 - alpha) * ema_prev
+            ema_prev = ema_today
+            smoothed.append({"date": entry["date"], "risk": round(ema_today, 2)})
+
+        # Save smoothed history
+        with open("risk_history.json", "w") as f:
+            json.dump(smoothed, f, indent=2)
+
+        print("Smoothed history updated.")
+
+        # ---------------------------
+        # Save current indicators JSON
+        # ---------------------------
+        indicators = {
+            "generated_at": datetime.utcnow().isoformat(),
             "risk": {
                 "value": risk,
-                "date": datetime.now().strftime('%Y-%m-%d')
+                "date": today
             },
             "indicators": [
                 {
-                    "name": "Yield Curve (10Y-2Y)",
                     "id": "yield_curve",
-                    "series_ids": ["DGS10", "DGS2"],
+                    "name": "Yield Curve (10Y-2Y)",
+                    "value": round(yc, 2) if yc is not None else None,
                     "frequency": "Daily",
-                    "value": round(float(yield_10y) - float(yield_2y), 2) if yield_10y and yield_2y else None,
-                    "units": "percentage points",
-                    "last_updated": min(date_10y, date_2y) if date_10y and date_2y else None
+                    "last_updated": min(d10_date, d02_date) if d10_date and d02_date else None
                 },
                 {
-                    "name": "Unemployment Rate",
                     "id": "unemployment",
-                    "series_ids": ["UNRATE"],
+                    "name": "Unemployment Rate",
+                    "value": unrate,
                     "frequency": "Monthly",
-                    "value": float(unemployment) if unemployment else None,
-                    "units": "percent",
-                    "last_updated": date_unemp
+                    "last_updated": unrate_date
                 },
                 {
-                    "name": "Initial Jobless Claims",
                     "id": "initial_claims",
-                    "series_ids": ["ICSA"],
+                    "name": "Initial Jobless Claims",
+                    "value": claims,
                     "frequency": "Weekly",
-                    "value": int(float(initial_claims)) if initial_claims else None,
-                    "units": "claims",
-                    "last_updated": date_claims
+                    "last_updated": claims_date
                 },
                 {
-                    "name": "Real GDP Growth",
                     "id": "gdp_growth",
-                    "series_ids": ["A191RL1Q225SBEA"],
+                    "name": "Real GDP Growth",
+                    "value": gdp,
                     "frequency": "Quarterly",
-                    "value": float(gdp_growth) if gdp_growth else None,
-                    "units": "percent (annual rate)",
-                    "last_updated": date_gdp
+                    "last_updated": gdp_date
                 },
                 {
-                    "name": "Industrial Production",
                     "id": "industrial_production",
-                    "series_ids": ["INDPRO"],
+                    "name": "Industrial Production",
+                    "value": indpro,
                     "frequency": "Monthly",
-                    "value": float(industrial_prod) if industrial_prod else None,
-                    "units": "index (2017=100)",
-                    "last_updated": date_ind
+                    "last_updated": indpro_date
                 },
                 {
-                    "name": "Consumer Sentiment",
                     "id": "consumer_sentiment",
-                    "series_ids": ["UMCSENT"],
+                    "name": "Consumer Sentiment",
+                    "value": sentiment,
                     "frequency": "Monthly",
-                    "value": float(consumer_sentiment) if consumer_sentiment else None,
-                    "units": "index",
-                    "last_updated": date_cons
+                    "last_updated": sentiment_date
                 },
                 {
-                    "name": "BBB Credit Spread",
                     "id": "bbb_credit_spread",
-                    "series_ids": ["BAMLC0A4CBBB"],
+                    "name": "BBB Credit Spread",
+                    "value": credit,
                     "frequency": "Daily",
-                    "value": float(credit_spread) if credit_spread else None,
-                    "units": "percentage points over Treasuries",
-                    "last_updated": date_credit
+                    "last_updated": credit_date
                 },
                 {
-                    "name": "Housing Starts",
                     "id": "housing_starts",
-                    "series_ids": ["HOUST"],
+                    "name": "Housing Starts",
+                    "value": housing,
                     "frequency": "Monthly",
-                    "value": float(housing_starts) if housing_starts else None,
-                    "units": "thousands of units (SAAR)",
-                    "last_updated": date_housing
+                    "last_updated": housing_date
                 }
             ]
         }
 
-        with open('current_indicators.json', 'w') as f:
-            json.dump(current_indicators, f, indent=2)
-        print('Saved current indicators to current_indicators.json')
+        with open("current_indicators.json", "w") as f:
+            json.dump(indicators, f, indent=2)
 
-        # ---- Update risk_history.json (real history only) ----
-        current_date = datetime.now().strftime('%Y-%m-%d')
-        print(f'Current date: {current_date}')
+        print("current_indicators.json updated.")
 
-        history = []
-        try:
-            with open('risk_history.json', 'r') as f:
-                history = json.load(f)
-            print(f'Loaded {len(history)} historical records')
-        except FileNotFoundError:
-            print('ERROR: risk_history.json not found. Please run backfill_real_history.py locally to regenerate real history.')
-            exit(1)
-
-        # Sort by date defensively
-        history.sort(key=lambda x: x['date'])
-
-        today_entry = {
-            'date': current_date,
-            'risk': risk
-        }
-
-        if history and history[-1].get('date') == current_date:
-            print(f'Updating existing entry for {current_date}')
-            history[-1] = today_entry
-        else:
-            print(f'Appending new entry for {current_date}')
-            history.append(today_entry)
-
-        # Keep only last 730 days (2 years)
-        history = history[-730:]
-
-        with open('risk_history.json', 'w') as f:
-            json.dump(history, f, indent=2)
-        print(f'Saved {len(history)} records to risk_history.json')
-
-        # ---- Update the HTML file ----
-        print('Updating dashboard HTML...')
-        with open('index.html', 'r') as f:
-            html_content = f.read()
-
-        # Update risk percentage
-        html_content = re.sub(
-            r'<div class="risk-percentage">[^<]+</div>',
-            f'<div class="risk-percentage">{int(risk)}%</div>',
-            html_content
-        )
-
-        # Update last updated date
-        html_content = re.sub(
-            r'<div class="last-updated">Last Updated:.*?</div>',
-            f'<div class="last-updated">Last Updated: {datetime.now().strftime("%B %d, %Y at %I:%M %p ET")}</div>',
-            html_content
-        )
-
-        # Update individual indicator values in HTML (tiles) – optional but kept
-        if yield_curve is not None:
-            sign = '+' if yield_curve >= 0 else ''
-            pattern = r'(<div class="indicator-name">Yield Curve \(10Y-2Y\)</div>\s*<div class="indicator-value">)[^<]+(</div>)'
-            replacement = r'\\g<1>' + f'{sign}{yield_curve:.2f}%' + r'\\g<2>'
-            html_content = re.sub(pattern, replacement, html_content, flags=re.DOTALL)
-
-        if unemployment:
-            pattern = r'(<div class="indicator-name">Unemployment Rate</div>\s*<div class="indicator-value">)[^<]+(</div>)'
-            replacement = r'\\g<1>' + f'{unemployment}%' + r'\\g<2>'
-            html_content = re.sub(pattern, replacement, html_content, flags=re.DOTALL)
-
-        if initial_claims:
-            claims_formatted = f'{int(float(initial_claims)):,}'
-            pattern = r'(<div class="indicator-name">Initial Jobless Claims</div>\s*<div class="indicator-value">)[^<]+(</div>)'
-            replacement = r'\\g<1>' + claims_formatted + r'\\g<2>'
-            html_content = re.sub(pattern, replacement, html_content, flags=re.DOTALL)
-
-        if gdp_growth:
-            pattern = r'(<div class="indicator-name">Real GDP Growth</div>\s*<div class="indicator-value">)[^<]+(</div>)'
-            replacement = r'\\g<1>' + f'{gdp_growth}%' + r'\\g<2>'
-            html_content = re.sub(pattern, replacement, html_content, flags=re.DOTALL)
-
-        if industrial_prod:
-            pattern = r'(<div class="indicator-name">Industrial Production</div>\s*<div class="indicator-value">)[^<]+(</div>)'
-            replacement = r'\\g<1>' + str(industrial_prod) + r'\\g<2>'
-            html_content = re.sub(pattern, replacement, html_content, flags=re.DOTALL)
-
-        if consumer_sentiment:
-            pattern = r'(<div class="indicator-name">Consumer Sentiment</div>\s*<div class="indicator-value">)[^<]+(</div>)'
-            replacement = r'\\g<1>' + str(consumer_sentiment) + r'\\g<2>'
-            html_content = re.sub(pattern, replacement, html_content, flags=re.DOTALL)
-
-        if credit_spread:
-            pattern = r'(<div class="indicator-name">BBB Credit Spread</div>\s*<div class="indicator-value">)[^<]+(</div>)'
-            replacement = r'\\g<1>' + f'{credit_spread}%' + r'\\g<2>'
-            html_content = re.sub(pattern, replacement, html_content, flags=re.DOTALL)
-
-        if housing_starts:
-            pattern = r'(<div class="indicator-name">Housing Starts</div>\s*<div class="indicator-value">)[^<]+(</div>)'
-            replacement = r'\\g<1>' + f'{housing_starts}K' + r'\\g<2>'
-            html_content = re.sub(pattern, replacement, html_content, flags=re.DOTALL)
-
-        with open('index.html', 'w') as f:
-            f.write(html_content)
-        print('✓ Dashboard updated successfully!')
-        EOF
-        
-    - name: Commit and push if changes
+    - name: Commit and push changes
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git add -A
-        git diff --quiet && git diff --staged --quiet || (git commit -m "Update economic data - $(date)" && git push)
+        git diff --quiet || git commit -m "Daily data update (EMA smoothed)"
+        git push
