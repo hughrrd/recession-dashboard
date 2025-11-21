@@ -10,23 +10,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.10"
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
 
-    - name: Install dependencies
-      run: |
-        pip install requests
+      - name: Install dependencies
+        run: |
+          pip install requests
 
-    - name: Update economic data + history (EMA)
-      env:
-        FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
-      run: |
-        python3 << 'EOF'
+      - name: Update economic data + history (EMA)
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: |
+          python3 << 'EOF'
 import requests
 import json
 import os
@@ -52,7 +52,7 @@ def fetch(series_id):
     try:
         r = requests.get(url, params=params, timeout=10)
         if r.status_code != 200:
-            print(f"⚠ Warning: {series_id} bad response")
+            print(f"⚠ Warning: {series_id} bad response (status {r.status_code})")
             return None, None
         data = r.json().get("observations", [])
         for obs in data:
@@ -75,68 +75,117 @@ sent, date_s = fetch("UMCSENT")
 spread, date_b = fetch("BAMLC0A4CBBB")
 hstart, date_h = fetch("HOUST")
 
+print(f"10Y: {d10} ({date10}), 2Y: {d2} ({date2})")
+print(f"Unemployment: {unemp} ({date_u})")
+print(f"Claims: {claims} ({date_c})")
+print(f"GDP: {gdp} ({date_g})")
+print(f"Industrial Production: {iprod} ({date_i})")
+print(f"Sentiment: {sent} ({date_s})")
+print(f"BBB Spread: {spread} ({date_b})")
+print(f"Housing Starts: {hstart} ({date_h})")
+
 # ------------------- Compute yield curve -------------------
 yc = None
 if d10 and d2:
-    yc = float(d10) - float(d2)
+    try:
+        yc = float(d10) - float(d2)
+        print(f"Yield curve (10Y-2Y): {yc:.2f} pp")
+    except Exception as e:
+        print(f"⚠ Error computing yield curve: {e}")
 
 # ------------------- Risk Calculation -------------------
 risk = 15  # baseline
+print(f"Starting baseline risk: {risk}")
 
 # Yield curve
 if yc is not None:
     if yc < -0.5:
         risk += 25
+        print(f"Yield curve deeply inverted (< -0.5): +25 → {risk}")
     elif yc < 0:
-        risk += abs(yc) * 30
+        delta = abs(yc) * 30
+        risk += delta
+        print(f"Yield curve slightly inverted: +{delta:.1f} → {risk}")
     elif yc > 0.5:
         risk -= 5
+        print(f"Yield curve comfortably positive (> 0.5): -5 → {risk}")
 
 # Unemployment
 if unemp:
-    u = float(unemp)
-    if u > 5: risk += (u - 5) * 8
-    elif u < 4: risk -= 3
+    try:
+        u = float(unemp)
+        if u > 5:
+            delta = (u - 5) * 8
+            risk += delta
+            print(f"Unemployment {u:.1f}% > 5%: +{delta:.1f} → {risk}")
+        elif u < 4:
+            risk -= 3
+            print(f"Unemployment {u:.1f}% < 4%: -3 → {risk}")
+    except Exception as e:
+        print(f"⚠ Error handling unemployment: {e}")
 
 # Jobless claims
 if claims:
-    c = float(claims)
-    if c > 300000:
-        risk += (c - 300000) / 10000
+    try:
+        c = float(claims)
+        if c > 300000:
+            delta = (c - 300000) / 10000
+            risk += delta
+            print(f"Claims {c:.0f} > 300k: +{delta:.1f} → {risk}")
+    except Exception as e:
+        print(f"⚠ Error handling claims: {e}")
 
 # GDP
 if gdp:
-    g = float(gdp)
-    if g < 0:
-        risk += 15
-    elif g < 2:
-        risk += (2 - g) * 5
+    try:
+        g = float(gdp)
+        if g < 0:
+            risk += 15
+            print(f"GDP {g:.1f}% < 0: +15 → {risk}")
+        elif g < 2:
+            delta = (2 - g) * 5
+            risk += delta
+            print(f"GDP {g:.1f}% < 2: +{delta:.1f} → {risk}")
+    except Exception as e:
+        print(f"⚠ Error handling GDP: {e}")
 
 # Consumer sentiment
 if sent:
-    cs = float(sent)
-    if cs < 70:
-        risk += 10
-    elif cs < 90:
-        risk += (90 - cs) / 4
+    try:
+        cs = float(sent)
+        if cs < 70:
+            risk += 10
+            print(f"Sentiment {cs:.1f} < 70: +10 → {risk}")
+        elif cs < 90:
+            delta = (90 - cs) / 4
+            risk += delta
+            print(f"Sentiment {cs:.1f} < 90: +{delta:.1f} → {risk}")
+    except Exception as e:
+        print(f"⚠ Error handling sentiment: {e}")
 
 # Credit spread
 if spread:
-    s = float(spread)
-    if s > 2.5:
-        risk += (s - 2.5) * 8
+    try:
+        s = float(spread)
+        if s > 2.5:
+            delta = (s - 2.5) * 8
+            risk += delta
+            print(f"Spread {s:.2f} > 2.5: +{delta:.1f} → {risk}")
+    except Exception as e:
+        print(f"⚠ Error handling spread: {e}")
 
-# Clamp risk
-risk = max(5, min(95, round(risk, 1)))
-
-print(f"Raw risk: {risk}")
+# Clamp raw risk
+risk = round(risk, 1)
+risk = max(5, min(95, risk))
+print(f"Raw (unsmoothed) risk for today: {risk}%")
 
 # ------------------- Load existing history -------------------
 try:
     with open("risk_history.json", "r") as f:
         hist = json.load(f)
-except:
-    print("⚠ No history found; initializing new list.")
+    print(f"Loaded {len(hist)} existing history entries.")
+except Exception as e:
+    print(f"⚠ Could not load risk_history.json ({e}); starting fresh.")
     hist = []
 
 # ------------------- EMA Smoothing -------------------
@@ -148,24 +197,22 @@ def ema(values, alpha=0.2):
         smoothed.append(alpha * v + (1 - alpha) * smoothed[-1])
     return smoothed
 
-# Add today's raw value first
 today = datetime.now().strftime("%Y-%m-%d")
+
+# Append today's raw value
 hist.append({"date": today, "risk": risk})
 
-# Keep last 730 days
+# Keep only last 730 days
 hist = hist[-730:]
 
-# Extract raw list
 raw_values = [h["risk"] for h in hist]
+smoothed_values = ema(raw_values, alpha=0.2)
 
-# Smooth
-smoothed = ema(raw_values)
-
-# Write back smoothed values
-for i, v in enumerate(smoothed):
+for i, v in enumerate(smoothed_values):
     hist[i]["risk"] = round(v, 1)
 
-print("✓ EMA smoothing applied")
+print(f"✓ EMA smoothing applied over {len(hist)} points.")
+print(f"Latest smoothed risk: {hist[-1]['risk']}% on {hist[-1]['date']}")
 
 # ------------------- Save updated history -------------------
 with open("risk_history.json", "w") as f:
@@ -186,7 +233,7 @@ current = {
             "id": "yield_curve",
             "frequency": "Daily",
             "value": round(yc, 2) if yc is not None else None,
-            "last_updated": min(date10, date2)
+            "last_updated": min(date10, date2) if date10 and date2 else None
         },
         {
             "name": "Unemployment Rate",
@@ -203,7 +250,7 @@ current = {
             "last_updated": date_c
         },
         {
-            "name": "GDP Growth",
+            "name": "Real GDP Growth",
             "id": "gdp_growth",
             "frequency": "Quarterly",
             "value": float(gdp) if gdp else None,
@@ -245,27 +292,30 @@ with open("current_indicators.json", "w") as f:
 
 print("✓ Saved current_indicators.json")
 
-# ------------------- Update index.html -------------------
-with open("index.html", "r") as f:
-    html = f.read()
+# ------------------- Update index.html (risk number) -------------------
+try:
+    with open("index.html", "r") as f:
+        html = f.read()
 
-html = html.replace(
-    '<div class="risk-percentage">—</div>',
-    f'<div class="risk-percentage">{risk}%</div>'
-)
-
-with open("index.html", "w") as f:
-    f.write(html)
-
-print("✓ Updated index.html")
+    old = '<div class="risk-percentage" id="riskValue">—</div>'
+    new = f'<div class="risk-percentage" id="riskValue">{risk}%</div>'
+    if old in html:
+        html = html.replace(old, new)
+        with open("index.html", "w") as f:
+            f.write(html)
+        print("✓ Updated index.html risk placeholder")
+    else:
+        print("ℹ risk placeholder not found in index.html; skipping HTML update.")
+except Exception as e:
+    print(f"⚠ Could not update index.html: {e}")
 
 print("🎉 DONE – Workflow successful.")
 EOF
 
-    - name: Commit & push if changed
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add -A
-        git diff --quiet && git diff --staged --quiet || \
-          (git commit -m "Automated update - $(date)" && git push)
+      - name: Commit & push if changed
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -A
+          git diff --quiet && git diff --staged --quiet || \
+            (git commit -m "Automated update - $(date)" && git push)
