@@ -240,6 +240,7 @@
             margin: 5px 0;
             font-size: 0.9em;
         }
+
         .methodology-section {
             margin-top: 40px;
             padding: 30px;
@@ -392,8 +393,6 @@
             color: #777;
             font-style: italic;
         }
-
-
     </style>
 </head>
 <body>
@@ -402,7 +401,7 @@
             <h1>📊 U.S. Recession Risk Dashboard</h1>
             <div class="subtitle">Real-time Economic Indicators & Risk Assessment</div>
             <div class="last-updated" id="lastUpdated">
-                Last Updated: November 20, 2025 at 02:30 PM ET
+                Last Updated: —
             </div>
         </header>
         
@@ -410,9 +409,9 @@
             <!-- Risk Meter -->
             <div class="risk-meter-section">
                 <div class="risk-label" id="riskLabel">Current Recession Risk</div>
-                <div class="risk-percentage" id="riskValue">20%</div>
+                <div class="risk-percentage" id="riskValue">—</div>
                 <div class="risk-description" id="riskDescription">
-                    Economy showing healthy growth with minimal recession indicators
+                    Economy showing healthy growth with minimal recession indicators.
                 </div>
                 
                 <div class="legend">
@@ -445,16 +444,17 @@
             <div class="indicators-grid" id="indicators">
                 <!-- Indicator 1: Yield Curve -->
                 <div class="indicator-card" data-indicator-id="yield_curve">
-                    \g<1>+0.54%\g<2>
-                
+                    <div class="indicator-name">Yield Curve (10Y – 2Y Spread)</div>
+                    <div class="indicator-value">—</div>
+    
                     <div class="indicator-details">
                         <div>Status: —</div>
                     </div>
-                
+    
                     <div class="js-indicator-meta">
-                        Update Frequency: Daily • Last Updated: —
+                        Daily • Last Updated: —
                     </div>
-                
+    
                     <div class="indicator-description">
                         Difference between 10-year and 2-year Treasury yields. Inversion (negative values)
                         historically precedes recessions by 12–18 months.
@@ -463,16 +463,17 @@
                 
                 <!-- Indicator 2: Unemployment Rate -->
                 <div class="indicator-card" data-indicator-id="unemployment">
-                    \g<1>4.4%\g<2>
-                
+                    <div class="indicator-name">Unemployment Rate</div>
+                    <div class="indicator-value">—</div>
+    
                     <div class="indicator-details">
                         <div>Status: —</div>
                     </div>
-                
+    
                     <div class="js-indicator-meta">
-                        Update Frequency: Monthly • Last Updated: —
+                        Monthly • Last Updated: —
                     </div>
-                
+    
                     <div class="indicator-description">
                         Percentage of workforce actively seeking employment. Rapid increases of 0.5% or more
                         within 3 months often signal accelerating recession risk.
@@ -481,16 +482,17 @@
                 
                 <!-- Indicator 3: Initial Jobless Claims -->
                 <div class="indicator-card" data-indicator-id="initial_claims">
-                    \g<1>220,000\g<2>
-                
+                    <div class="indicator-name">Initial Jobless Claims</div>
+                    <div class="indicator-value">—</div>
+    
                     <div class="indicator-details">
                         <div>Status: —</div>
                     </div>
-                
+    
                     <div class="js-indicator-meta">
-                        Update Frequency: Weekly • Last Updated: —
+                        Weekly • Last Updated: —
                     </div>
-                
+    
                     <div class="indicator-description">
                         Weekly new unemployment filings. Sustained increases above 300,000 typically indicate
                         labor market deterioration and rising recession risk.
@@ -499,16 +501,17 @@
                 
                 <!-- Indicator 4: GDP Growth -->
                 <div class="indicator-card" data-indicator-id="gdp_growth">
-                    \g<1>3.8%\g<2>
-                
+                    <div class="indicator-name">Real GDP Growth (Annual Rate)</div>
+                    <div class="indicator-value">—</div>
+    
                     <div class="indicator-details">
                         <div>Status: —</div>
                     </div>
-                
+    
                     <div class="js-indicator-meta">
-                        Update Frequency: Quarterly • Last Updated: —
+                        Quarterly • Last Updated: —
                     </div>
-                
+    
                     <div class="indicator-description">
                         Inflation-adjusted economic growth rate. Two consecutive negative quarters historically
                         define recessions, though NBER uses broader criteria.
@@ -517,16 +520,17 @@
                 
                 <!-- Indicator 5: Industrial Production -->
                 <div class="indicator-card" data-indicator-id="industrial_production">
-                    \g<1>103.9203\g<2>
-                
+                    <div class="indicator-name">Industrial Production Index</div>
+                    <div class="indicator-value">—</div>
+    
                     <div class="indicator-details">
                         <div>Status: —</div>
                     </div>
-                
+    
                     <div class="js-indicator-meta">
-                        Update Frequency: Monthly • Last Updated: —
+                        Monthly • Last Updated: —
                     </div>
-                
+    
                     <div class="indicator-description">
                         Index of output for manufacturing, mining, and utilities. Persistent declines reflect
                         weakening real economic activity and are common pre-recession.
@@ -535,63 +539,63 @@
                 
                 <!-- Indicator 6: Consumer Sentiment -->
                 <div class="indicator-card" data-indicator-id="consumer_sentiment">
-                    \g<1>55.1\g<2>
-                
+                    <div class="indicator-name">Consumer Sentiment (UMich)</div>
+                    <div class="indicator-value">—</div>
+    
                     <div class="indicator-details">
                         <div>Status: —</div>
                     </div>
-                
+    
                     <div class="js-indicator-meta">
-                        Update Frequency: Monthly • Last Updated: —
+                        Monthly • Last Updated: —
                     </div>
-                
+    
                     <div class="indicator-description">
                         UMich survey measuring consumer expectations. Sharp declines often precede reductions
                         in spending and rising recession probability.
                     </div>
                 </div>
-
-                
+    
                 <!-- Indicator 7: Credit Spread -->
                 <div class="indicator-card" data-indicator-id="bbb_credit_spread">
-                    \g<1>1.07%\g<2>
-                
+                    <div class="indicator-name">BBB Corporate Credit Spread</div>
+                    <div class="indicator-value">—</div>
+    
                     <div class="indicator-details">
                         <div>Status: —</div>
                     </div>
-                
+    
                     <div class="js-indicator-meta">
-                        Update Frequency: Daily • Last Updated: —
+                        Daily • Last Updated: —
                     </div>
-                
+    
                     <div class="indicator-description">
                         Yield spread between BBB-rated corporate bonds and Treasuries. Widening spreads
                         indicate rising credit risk and financial stress.
                     </div>
                 </div>
-
-                
+    
                 <!-- Indicator 8: Housing Starts -->
                 <div class="indicator-card" data-indicator-id="housing_starts">
-                    \g<1>1307.0K\g<2>
-                
+                    <div class="indicator-name">Housing Starts (Annualized)</div>
+                    <div class="indicator-value">—</div>
+    
                     <div class="indicator-details">
                         <div>Status: —</div>
                     </div>
-                
+    
                     <div class="js-indicator-meta">
-                        Update Frequency: Monthly • Last Updated: —
+                        Monthly • Last Updated: —
                     </div>
-                
+    
                     <div class="indicator-description">
                         Number of new residential construction projects started. Major slowdowns frequently
                         signal weakening demand and recession conditions.
                     </div>
                 </div>
-
             </div>
 
-            <!-- Risk Methodology Section -->
+            <!-- Risk Methodology Text Block (original) -->
             <div class="historical-section" style="margin-top: 40px;">
                 <h3>🧮 How the Recession Risk Score Is Calculated</h3>
             
@@ -658,7 +662,6 @@
                 </p>
             </div>
 
-            
             <!-- Historical Context -->
             <div class="historical-section">
                 <h3>📜 Historical Recession Comparison</h3>
@@ -692,7 +695,7 @@
                 </div>
             </div>
             
-            <!-- How the Recession Risk Score Is Calculated -->
+            <!-- How the Recession Risk Score Is Calculated (detailed) -->
             <section class="methodology-section" id="risk-methodology">
                 <h2 class="methodology-title">📐 How the Recession Risk Score Is Calculated</h2>
                 <p class="methodology-intro">
@@ -810,7 +813,6 @@
                 </div>
             </section>
 
-
             <div class="chart-container">
                 <div class="chart-title">Recession Risk Trend (Past 2 Years)</div>
                 <div class="chart-subtitle">
@@ -826,7 +828,7 @@
         </div>
     </div>
     
-        <script>
+    <script>
         // --------- Helper: risk tier label & description ----------
         function getRiskTier(risk) {
             if (risk == null || isNaN(risk)) {
@@ -835,7 +837,7 @@
                     description: 'Risk cannot be computed because one or more indicators are missing.'
                 };
             }
-    
+
             if (risk < 30) {
                 return {
                     label: 'Low Recession Risk',
@@ -853,12 +855,12 @@
                 };
             }
         }
-    
+
         // --------- Helper: format indicator values ----------
         function formatIndicatorValue(id, value) {
             if (value == null || isNaN(value)) return '—';
             value = Number(value);
-    
+
             switch (id) {
                 case 'yield_curve':
                     return (value >= 0 ? '+' : '') + value.toFixed(2) + '%';
@@ -880,76 +882,73 @@
                     return String(value);
             }
         }
-    
+
         // --------- Helper: compute indicator status (Safe / Warning / Critical) ----------
         function getIndicatorStatus(id, value) {
             if (value == null || isNaN(value)) {
                 return { label: 'Status: —', className: '' };
             }
             value = Number(value);
-    
-            // Simple, explainable heuristics (you can tune these)
+
             switch (id) {
                 case 'yield_curve':
                     if (value < 0) return { label: 'Status: ⚠️ Inverted (Warning)', className: 'warning' };
                     if (value < 0.5) return { label: 'Status: ⚠️ Flattened', className: 'warning' };
                     return { label: 'Status: ✅ Normal', className: 'safe' };
-    
+
                 case 'unemployment':
                     if (value >= 6.0) return { label: 'Status: 🔴 Elevated', className: 'critical' };
                     if (value >= 4.5) return { label: 'Status: ⚠️ Rising', className: 'warning' };
                     return { label: 'Status: ✅ Healthy', className: 'safe' };
-    
+
                 case 'initial_claims':
                     if (value >= 300000) return { label: 'Status: 🔴 High claims', className: 'critical' };
                     if (value >= 250000) return { label: 'Status: ⚠️ Elevated claims', className: 'warning' };
                     return { label: 'Status: ✅ Normal range', className: 'safe' };
-    
+
                 case 'gdp_growth':
                     if (value < 0) return { label: 'Status: 🔴 Contraction', className: 'critical' };
                     if (value < 2.0) return { label: 'Status: ⚠️ Slowing growth', className: 'warning' };
                     return { label: 'Status: ✅ Solid growth', className: 'safe' };
-    
+
                 case 'industrial_production':
-                    // Harder without YoY change; treat any value as neutral for now
                     return { label: 'Status: ℹ️ Monitor trend', className: '' };
-    
+
                 case 'consumer_sentiment':
                     if (value < 60) return { label: 'Status: 🔴 Very weak sentiment', className: 'critical' };
                     if (value < 80) return { label: 'Status: ⚠️ Below average', className: 'warning' };
                     return { label: 'Status: ✅ Normal/strong', className: 'safe' };
-    
+
                 case 'bbb_credit_spread':
                     if (value >= 3.5) return { label: 'Status: 🔴 High stress', className: 'critical' };
                     if (value >= 2.5) return { label: 'Status: ⚠️ Elevated stress', className: 'warning' };
                     return { label: 'Status: ✅ Stable credit', className: 'safe' };
-    
+
                 case 'housing_starts':
-                    // Without trend, just show neutral label
                     return { label: 'Status: ℹ️ Monitor trend', className: '' };
-    
+
                 default:
                     return { label: 'Status: —', className: '' };
             }
         }
-    
+
         // --------- Update header (risk meter + last updated) ----------
         function updateHeader(riskValue, riskDate, generatedAt) {
             const riskLabelEl = document.getElementById('riskLabel');
             const riskValueEl = document.getElementById('riskValue');
             const riskDescriptionEl = document.getElementById('riskDescription');
             const lastUpdatedEl = document.getElementById('lastUpdated');
-    
+
             if (riskValueEl && riskValue != null && !isNaN(riskValue)) {
                 riskValueEl.textContent = Number(riskValue).toFixed(1) + '%';
             }
-    
+
             const tier = getRiskTier(riskValue);
             if (riskLabelEl) riskLabelEl.textContent = tier.label;
             if (riskDescriptionEl) riskDescriptionEl.textContent = tier.description;
-    
+
             let displayText = 'Last Updated: ';
-    
+
             if (generatedAt) {
                 const d = new Date(generatedAt);
                 if (!isNaN(d)) {
@@ -978,26 +977,26 @@
             } else {
                 displayText += 'N/A';
             }
-    
+
             if (lastUpdatedEl) lastUpdatedEl.textContent = displayText;
         }
-    
+
         // --------- Update indicator tiles ----------
         function updateIndicatorCards(indicators) {
             if (!Array.isArray(indicators)) return;
             const map = new Map(indicators.map(i => [i.id, i]));
-    
+
             document.querySelectorAll('.indicator-card[data-indicator-id]').forEach(card => {
                 const id = card.dataset.indicatorId;
                 const data = map.get(id);
                 if (!data) return;
-    
+
                 // Value
                 const valueEl = card.querySelector('.indicator-value');
                 if (valueEl) {
                     valueEl.textContent = formatIndicatorValue(id, data.value);
                 }
-    
+
                 // Meta line: frequency + last updated
                 const metaEl = card.querySelector('.js-indicator-meta');
                 if (metaEl) {
@@ -1005,14 +1004,14 @@
                     const last = data.last_updated || 'N/A';
                     metaEl.textContent = `${freq} • Last Updated: ${last}`;
                 }
-    
+
                 // Status line (first div inside .indicator-details)
                 const statusInfo = getIndicatorStatus(id, data.value);
                 const statusContainer = card.querySelector('.indicator-details div');
                 if (statusContainer) {
                     statusContainer.textContent = statusInfo.label;
                 }
-    
+
                 // Card border color (safe/warning/critical)
                 card.classList.remove('safe', 'warning', 'critical');
                 if (statusInfo.className) {
@@ -1020,23 +1019,23 @@
                 }
             });
         }
-    
+
         // --------- Create risk chart ----------
         function createRiskChart(history) {
             if (!history || history.length === 0) {
                 console.error('No history data for chart');
                 return;
             }
-    
+
             const ctx = document.getElementById('riskChart');
             if (!ctx) {
                 console.error('Canvas element not found');
                 return;
             }
-    
+
             const labels = history.map(d => d.date);
             const data = history.map(d => d.risk);
-    
+
             new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -1054,13 +1053,12 @@
                         pointBackgroundColor: '#3498db',
                         pointBorderColor: '#fff',
                         pointBorderWidth: 2,
-                        // Color each segment based on risk value at the start of the segment
                         segment: {
                             borderColor: ctx => {
                                 const v = ctx.p0.parsed.y;
-                                if (v < 30) return '#27ae60';   // green
-                                if (v < 60) return '#f39c12';   // yellow
-                                return '#e74c3c';               // red
+                                if (v < 30) return '#27ae60';
+                                if (v < 60) return '#f39c12';
+                                return '#e74c3c';
                             }
                         }
                     }]
@@ -1171,7 +1169,7 @@
                 }
             });
         }
-    
+
         // --------- Main loader: fetch JSON + wire everything ----------
         async function loadDashboardData() {
             try {
@@ -1180,35 +1178,34 @@
                     fetch('risk_history.json'),
                     fetch('current_indicators.json')
                 ]);
-    
+
                 if (!historyRes.ok) throw new Error('Failed to load risk_history.json');
                 if (!indicatorsRes.ok) throw new Error('Failed to load current_indicators.json');
-    
+
                 const history = await historyRes.json();
                 const indicatorsData = await indicatorsRes.json();
-    
+
                 const riskValue =
                     indicatorsData?.risk?.value ??
                     (history.length ? history[history.length - 1].risk : null);
-    
+
                 const riskDate =
                     indicatorsData?.risk?.date ??
                     (history.length ? history[history.length - 1].date : null);
-    
+
                 const generatedAt = indicatorsData?.generated_at ?? null;
-    
+
                 updateHeader(riskValue, riskDate, generatedAt);
                 updateIndicatorCards(indicatorsData.indicators || []);
                 createRiskChart(history);
-    
+
                 console.log('✅ Dashboard data loaded successfully');
             } catch (error) {
                 console.error('❌ Error loading dashboard data:', error);
             }
         }
-    
+
         window.addEventListener('load', loadDashboardData);
     </script>
-
 </body>
 </html>
