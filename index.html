@@ -595,73 +595,6 @@
                 </div>
             </div>
 
-            <!-- Risk Methodology Text Block (original) -->
-            <div class="historical-section" style="margin-top: 40px;">
-                <h3>🧮 How the Recession Risk Score Is Calculated</h3>
-            
-                <p>
-                    The recession risk score is an additive model based on eight major U.S. economic indicators.
-                    Each indicator contributes positively or negatively to the total score depending on whether
-                    conditions are historically associated with expansion or recession. The score ranges from
-                    <strong>5% (very low risk)</strong> to <strong>95% (very high risk)</strong>.
-                </p>
-            
-                <h4 style="margin-top: 20px;">1. Baseline Risk</h4>
-                <p>The model begins with a <strong>baseline of 15%</strong>.</p>
-            
-                <h4 style="margin-top: 20px;">2. Yield Curve (10Y–2Y Spread) — Weight: 25%</h4>
-                <ul>
-                    <li>If spread &lt; –0.5% → <strong>+25 points</strong></li>
-                    <li>If spread is between 0% and –0.5% → <strong>+ (abs(spread) · 30)</strong></li>
-                    <li>If spread &gt; 0.5% → <strong>–5 points</strong> (normal steep curve)</li>
-                </ul>
-            
-                <h4 style="margin-top: 20px;">3. Unemployment Rate — Weight: 20%</h4>
-                <ul>
-                    <li>If unemployment &gt; 5.0% → <strong>+ (unemployment – 5.0) · 8</strong></li>
-                    <li>If unemployment &lt; 4.0% → <strong>–3 points</strong> (very strong labor market)</li>
-                </ul>
-            
-                <h4 style="margin-top: 20px;">4. Initial Jobless Claims — Weight: 10%</h4>
-                <ul>
-                    <li>If claims &gt; 300,000 → <strong>+ ((claims – 300,000) / 10,000)</strong></li>
-                </ul>
-            
-                <h4 style="margin-top: 20px;">5. Real GDP Growth — Weight: 15%</h4>
-                <ul>
-                    <li>If GDP &lt; 0 → <strong>+15 points</strong></li>
-                    <li>If GDP is between 0% and 2% → <strong>+ (2.0 – GDP) · 5</strong></li>
-                </ul>
-            
-                <h4 style="margin-top: 20px;">6. Consumer Sentiment (UMich) — Weight: 10%</h4>
-                <ul>
-                    <li>If sentiment &lt; 70 → <strong>+10 points</strong></li>
-                    <li>If sentiment is between 70 and 90 → <strong>+ ((90 – sentiment) / 4)</strong></li>
-                </ul>
-            
-                <h4 style="margin-top: 20px;">7. BBB Credit Spread — Weight: 10%</h4>
-                <ul>
-                    <li>If spread &gt; 2.5% → <strong>+ (spread – 2.5) · 8</strong></li>
-                </ul>
-            
-                <h4 style="margin-top: 20px;">8. Housing Starts — Informational</h4>
-                <p>
-                    Housing Starts are displayed and tracked but currently do not add or subtract from the numerical score.
-                </p>
-            
-                <h4 style="margin-top: 20px;">9. Final Score Clamping</h4>
-                <p>
-                    After all adjustments, the score is limited to the range:
-                    <strong>5% ≤ risk ≤ 95%</strong>.
-                </p>
-            
-                <h4 style="margin-top: 20px;">10. Daily Updates</h4>
-                <p>
-                    All indicator updates and risk recalculations occur automatically via scheduled GitHub Actions
-                    using data from the Federal Reserve Economic Data (FRED) API.
-                </p>
-            </div>
-
             <!-- Historical Context -->
             <div class="historical-section">
                 <h3>📜 Historical Recession Comparison</h3>
@@ -695,7 +628,7 @@
                 </div>
             </div>
             
-            <!-- How the Recession Risk Score Is Calculated (detailed) -->
+            <!-- Detailed Methodology -->
             <section class="methodology-section" id="risk-methodology">
                 <h2 class="methodology-title">📐 How the Recession Risk Score Is Calculated</h2>
                 <p class="methodology-intro">
